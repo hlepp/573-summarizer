@@ -1,14 +1,15 @@
 #!opt/python-3.6/bin/python3
 # -*- coding: utf-8 -*-
 
-"""Unit tests for select_content.py"""
+"""Unit tests for content_selection.py"""
 
 __author__ = "Shannon Ladymon"
 __email__ = "sladymon@uw.edu"
 
 import unittest
+# TODO: import content_selection.py (need to figure out from where)
 
-class TestSelectContent(unittest.TestCase):
+class TestContentSelection(unittest.TestCase):
 
 	# TODO: Add setUp(), tearDown() methods
 	# for what to do before/after each test method
