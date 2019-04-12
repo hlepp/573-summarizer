@@ -4,31 +4,33 @@
 """TODO: put a description of this file"""
 
 # TODO: import statements go here (sys, etc.)
-import get_data
-import select_content
-import order_info
-import realize_content
-import eval_summary
+from data_input import get_data
+from content_selection import select_content
+from info_ordering import order_info
+from content_realization import realize_content
+from evaluation import eval_summary
 
+# TODO: probably import Topic, Document, Sentence classes
 
 
 if __name__ == '__main__':
 	
+	# TODO: modify this to accept command line arguments
+	# which will have a configuration file for which data to read in
+	# that is then passed into get_data
+
 	# Read in data
-	# TODO: Determine format of data returned
-	# FOR NOW: return a 3D array of sentences from each doc from each topic set
-	# TODO: modify this file to get the data passed in
-	doc_data = get_data()
+	# this returns a 1D array of Topic objects
+	# (each of which contains a list of Document objects)
+	topics = get_data() # TODO: modify to accept a config file of data source
 
 
 	# Content Selection
 	# identifies salient sentences & ranks them
-	# & chooses up to 100 words
-	# TODO: figure out if we should have exactly 100 words,
-	# or just full sentences up to that limit
+	# & chooses up to 100 words (using full sentences)
 	# returns a 2D array of sentences for the summary for each topic
 	# and a 2D array of associated dates for each setence for each topic
-	summaries_sent, sent_dates = select_content(doc_data)
+	summaries_sent, sent_dates = select_content(topics)
 
 
 	# Information Ordering
@@ -48,6 +50,7 @@ if __name__ == '__main__':
 	# Evaluate summaries for each topic
 	# Run ROUGE-1 & ROUGE-2 on the summary
 	# TODO: modify this file to get ROUGE passed in
+	# (or should it be hard-coded?)
 	eval_summary(summary_files)
 
 
