@@ -7,7 +7,9 @@ __author__ = "Shannon Ladymon"
 __email__ = "sladymon@uw.edu"
 
 import unittest
-# TODO: import content_selection.py (need to figure out from where)
+import sys
+sys.path.append("../src")
+from content_selection import select_content
 
 class TestContentSelection(unittest.TestCase):
 
@@ -17,7 +19,12 @@ class TestContentSelection(unittest.TestCase):
 	def test_select_content(self):
 		# Dummy test temporarily
 		# TODO: fix to work with select_content
-		self.assertEqual(1,1)
+
+		summaries_sent, sent_dates = select_content(1)
+
+		self.assertEqual(len(summaries_sent),2)
+		self.assertEqual(len(sent_dates), 2)
+
 
 if __name__ == '__main__':
 	unittest.main()
