@@ -201,15 +201,7 @@ def get_topics_list(task_data:str)->list:
 
 
 
-file_paths=['/dropbox/18-19/573/Data/Documents/training/2009/UpdateSumm09_test_topics.xml',
-            '/dropbox/18-19/573/Data/Documents/devtest/GuidedSumm10_test_topics.xml']#,
-            #'/dropbox/18-19/573/Data/Documents/evaltest/GuidedSumm11_test_topics.xml']  ####### Should be used until deliverable 4!
 
-
-for topic in get_data(file_paths):
-    print(topic.topic_id +"\n")
-    for document in topic.document_list:
-        print(document.doc_id)
 
 
 
