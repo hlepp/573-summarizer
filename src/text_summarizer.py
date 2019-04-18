@@ -9,7 +9,7 @@ from content_selection import select_content
 from info_ordering import order_info
 from content_realization import realize_content
 from evaluation import eval_summary
-
+from sys import argv
 # TODO: probably import Topic, Document, Sentence classes
 
 
@@ -22,7 +22,7 @@ if __name__ == '__main__':
 	# Read in data
 	# this returns a 1D array of Topic objects
 	# (each of which contains a list of Document objects)
-	topics = get_data() # TODO: modify to accept a config file of data source
+	topics = get_data(argv[1]) # TODO: modify to accept a config file of data source
 
 
 	# Content Selection
