@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+__author__ = "Benny Longwill"
+__email__ = "longwill@uw.edu"
 
 from nltk import sent_tokenize
 from nltk import word_tokenize
 from bs4 import BeautifulSoup
 import document_retriever
+
 
 #### Put none for non-existing text
 ###############################
@@ -46,7 +51,8 @@ def get_data(file_paths:list)->list:
 
     task_data = ""
     for path in file_paths:
-        task_data += open(path).read() + "\n"
+        with open(path) as file:
+            task_data += file.read() + "\n"
 
     return get_topics_list(task_data)
 
@@ -70,7 +76,7 @@ def populate_document_list(current_topic, docsetA, doc_ret:document_retriever.Do
         raw_doc = doc_ret.retrieve_doc(doc_id)
         headline, category, dateline, doc_text = get_doc_attributes(raw_doc, doc_ret.headline_tag, doc_ret.category_tag, doc_ret.dateline_tag, doc_ret.text_tag)
 
-        current_doc = Document(doc_id=doc_id, headline=headline, dateline=dateline, category=category)  ########## Creates document object
+        current_doc = Document(doc_id=doc_id, headline=headline, dateline=doc_ret.date, category=category)  ########## Creates document object
 
         populate_sentence_list(current_doc, doc_text)
 
