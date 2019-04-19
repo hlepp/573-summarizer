@@ -17,7 +17,7 @@ def realize_content(summaries_in_order):
     # Parser processing sentences here..
 
     # Copy of original dictionary # TODO: assign param summaries after acutal processing
-    summaries = summaries_in_order
+    summaries = summaries_in_order.copy()
 
     # for now return original summaries_in_order dict {topic_id: [(sentences)]}
     return summaries
