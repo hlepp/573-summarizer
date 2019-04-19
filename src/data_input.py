@@ -63,6 +63,7 @@ def populate_sentence_list(current_doc, doc_text):
     doc_sentences = sent_tokenize(doc_text)
 
     for doc_sentence in doc_sentences:
+        doc_sentence = doc_sentence.replace("\n", " ").strip().replace("  ", " ")
         current_doc.sentence_list.append(Sentence( doc_sentence ,word_tokenize(doc_sentence)))  ############## Creates sentence object
         current_doc.sent_count += 1
 #Takes a Topic class object, an xml or html document set element, and a document retriever object
