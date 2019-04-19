@@ -20,7 +20,10 @@ def write_summary_files(summaries):
     in text_summarizer.py main.
     It should output a file for each topic with the final summary.
     """
-
+	
+	# Testing # TODO: remove when done
+	summary_files = []
+	
     # Directory where output files should be
     output_dir = "../outputs/D2/"
 
@@ -37,6 +40,9 @@ def write_summary_files(summaries):
         directory = os.path.dirname(file_path)
         if not os.path.exists(directory):
             os.makedirs(directory)
+			
+		# add file to array
+    	summary_files.append(file_path)
     
         with open(file_path, "w") as out_file:
 
@@ -46,6 +52,9 @@ def write_summary_files(summaries):
 
         #TODO: change to a counter if writing multiple files for one topic in one run
         #numeric_count += 1
+	
+	# Testing # TODO: remove when done
+	print(summary_files)
 
 if __name__ == '__main__':
 
