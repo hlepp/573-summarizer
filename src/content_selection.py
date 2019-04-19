@@ -43,9 +43,11 @@ def select_content(topics_list):
 
 			for sent_obj in doc.sentence_list:
 
-				sent = sent_obj.tokens
+				sent = sent_obj.original_sentence
 
-				sent_len = len(sent)
+				# Sentence length is the number of words
+				# which are space delimited
+				sent_len = sent.count(" ") + 1
 
 				# Check if this sentence can be added to the summary
 				# (if there is room) and do so if possible
