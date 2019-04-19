@@ -29,8 +29,9 @@ class Document:
         self.sent_count=0
         self.sentence_list=[]
 class Sentence:
-    def __init__(self, tokens:list=None):
+    def __init__(self, original_sentence:str=None, tokens:list=None):
         self.score=0
+        self.original_sentence=original_sentence
         self.tokens=tokens
 
 ###############################
@@ -62,7 +63,7 @@ def populate_sentence_list(current_doc, doc_text):
     doc_sentences = sent_tokenize(doc_text)
 
     for doc_sentence in doc_sentences:
-        current_doc.sentence_list.append(Sentence(word_tokenize(doc_sentence)))  ############## Creates sentence object
+        current_doc.sentence_list.append(Sentence( doc_sentence ,word_tokenize(doc_sentence)))  ############## Creates sentence object
         current_doc.sent_count += 1
 #Takes a Topic class object, an xml or html document set element, and a document retriever object
 # Itterates all document Id's in html/xml element and uses the doc retriever to get the raw document from database
