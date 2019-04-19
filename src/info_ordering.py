@@ -33,5 +33,9 @@ def order_info(topic_summaries):
         # Add sentence array for each topic to new dict
         summaries_in_order[topic] = sorted_sent
 
+    # TODO: Testing print to stdout, remove once done
+    for k, v in sorted(summaries_in_order.items(), key=itemgetter(1))[:5]:
+        print("topic id:{} sentences:{}".format(k,v))    
+        
     # Return dictionary with ordered sentences {topic_id: [sentences]}
     return summaries_in_order
