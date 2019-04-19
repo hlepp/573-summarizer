@@ -18,10 +18,6 @@ def realize_content(summaries_in_order):
 
     # Copy of original dictionary # TODO: assign param summaries after acutal processing
     summaries = summaries_in_order.copy()
-    
-	# TODO: Testing print to stdout, remove once done
-    for k, v in sorted(summaries.items(), key=itemgetter(1))[:5]:
-        print(" dictionary in realize_content() topic id:{} sentences:{}".format(k,v))
 
     # for now return original summaries_in_order dict {topic_id: [(sentences)]}
     return summaries

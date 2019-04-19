@@ -21,12 +21,8 @@ def write_summary_files(summaries):
     It should output a file for each topic with the final summary.
     """
 	
-	# TODO: Testing print to stdout, remove once done
-    for k, v in sorted(summaries.items(), key=itemgetter(1))[:5]:
-        print("topic id:{} sentences:{}".format(k,v))
-	
-	# Testing # TODO: remove when done
-	summary_files = []
+    # Testing # TODO: remove when done
+    summary_files = []
 	
     # Directory where output files should be
     output_dir = "../outputs/D2/"
@@ -40,14 +36,14 @@ def write_summary_files(summaries):
         id_part2 = topic_id[-1:]
 
         # Make output file name and directory
-        file_path = output_dir + "{}-A.M.100.{}.{}".format(id_part1, id_part2, str(numeric_count))
+        file_path = os.path.join(output_dir + "{}-A.M.100.{}.{}".format(id_part1, id_part2, str(numeric_count)))
         directory = os.path.dirname(file_path)
         if not os.path.exists(directory):
             os.makedirs(directory)
 			
-		# add file to array
-    	summary_files.append(file_path)
-    
+        # add file to array
+        summary_files.append(file_path)
+
         with open(file_path, "w") as out_file:
 
             # write sentences to topic output file
@@ -57,8 +53,8 @@ def write_summary_files(summaries):
         #TODO: change to a counter if writing multiple files for one topic in one run
         #numeric_count += 1
 	
-	# Testing # TODO: remove when done
-	print(summary_files)
+        # Testing # TODO: remove when done
+        print(summary_files)
 
 if __name__ == '__main__':
 
