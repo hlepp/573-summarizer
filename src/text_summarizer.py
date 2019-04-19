@@ -36,9 +36,9 @@ if __name__ == '__main__':
 
 
 	# Information Ordering
-	# orders sentences by date
-	# returns a 2D array of selected sentences in order for each topic
-#	summaries_in_order = order_info(topic_summaries)
+	# orders sentences by date for each topic
+	# returns a dictionary of {topic_id: [sentences]}
+	summaries_in_order = order_info(topic_summaries)
 
 	# Content Realization
 	# process sentences to make well-formed
