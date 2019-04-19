@@ -25,7 +25,7 @@ def write_summary_files(summaries):
     summary_files = []
 	
     # Directory where output files should be
-    output_dir = "../outputs/D2/"
+    output_dir = "outputs/D2/"
 
     # TODO: change unique file numbering system if needed
     numeric_count = 1
@@ -38,9 +38,10 @@ def write_summary_files(summaries):
         # Make output file name and directory
         file_path = os.path.join(output_dir + "{}-A.M.100.{}.{}".format(id_part1, id_part2, str(numeric_count)))
         directory = os.path.dirname(file_path)
+
         if not os.path.exists(directory):
             os.makedirs(directory)
-			
+		
         # add file to array
         summary_files.append(file_path)
 
@@ -53,8 +54,8 @@ def write_summary_files(summaries):
         #TODO: change to a counter if writing multiple files for one topic in one run
         #numeric_count += 1
 	
-        # Testing # TODO: remove when done
-        print(summary_files)
+    # Testing # TODO: remove when done
+#    print(summary_files)
 
 if __name__ == '__main__':
 
