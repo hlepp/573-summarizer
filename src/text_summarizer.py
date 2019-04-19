@@ -21,6 +21,10 @@ def write_summary_files(summaries):
     It should output a file for each topic with the final summary.
     """
 	
+	# TODO: Testing print to stdout, remove once done
+    for k, v in sorted(summaries.items(), key=itemgetter(1))[:5]:
+        print("topic id:{} sentences:{}".format(k,v))
+	
 	# Testing # TODO: remove when done
 	summary_files = []
 	
