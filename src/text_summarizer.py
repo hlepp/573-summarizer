@@ -8,7 +8,7 @@ from data_input import get_data
 from content_selection import select_content
 from info_ordering import order_info
 from content_realization import realize_content
-#from evaluation import eval_summary
+from evaluation import eval_summary
 from sys import argv
 import os
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 	# Run ROUGE-1 & ROUGE-2 on the summary
 	# TODO: modify this file to get ROUGE passed in
 	# (or should it be hard-coded?)
-#	eval_summary()
+	eval_summary()
 
 
 
