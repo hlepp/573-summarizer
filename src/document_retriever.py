@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+__author__ = "Benny Longwill"
+__email__ = "longwill@uw.edu"
 
 from lxml import etree
 from lxml import html
@@ -13,22 +17,24 @@ from lxml import html
 class Document_Retriever:
     def __init__(self):
         self.xml_parser_cache = {}
+        self.date=None
         self.headline_tag = None
         self.category_tag = None
         self.dateline_tag = None
         self.text_tag = None
 
+    #Contains lots of the hardcoded configurations in order to parse doc id to derive the correct database
     def configure(self, doc_id: str):
         self.doc_id = doc_id
 
         if "_" in doc_id:
             source, lang, other = doc_id.split("_")
-            date, specifier = other.split(".")
-            year = date[:4]
+            self.date, specifier = other.split(".")
+            year = self.date[:4]
         else:
             source = doc_id[:3]
-            date = doc_id[3:11]
-            year = date[:4]
+            self.date = doc_id[3:11]
+            year = self.date[:4]
             # specifier = doc_id[-4:]
             lang = "ENG"
 
@@ -37,6 +43,7 @@ class Document_Retriever:
         else:
             alt_source = source
 
+        #############################
         self.acquaint = int(year) >= 1996 and int(year) <= 2000
 
         self.acquaint2 = int(year) >= 2004 and int(year) <= 2006
@@ -72,7 +79,8 @@ class Document_Retriever:
                 tree = self.xml_parser_cache[self.doc_path]
             else:
                 parser = etree.HTMLParser(encoding='utf-8', remove_blank_text=True)
-                tree = html.fragment_fromstring(open(self.doc_path).read(), create_parent='body', parser=parser)
+                with open(self.doc_path) as file:
+                    tree = html.fragment_fromstring(file.read(), create_parent='body', parser=parser)
                 self.xml_parser_cache.update({self.doc_path: tree})
 
             raw_doc = [element for element in tree.findall("doc") if element.find("docno").text == " " + doc_id + " "][
@@ -88,3 +96,5 @@ class Document_Retriever:
             raw_doc = [element for element in tree.findall("DOC") if element.get("id") == doc_id][0]
 
         return raw_doc
+
+
