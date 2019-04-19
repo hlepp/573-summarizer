@@ -43,7 +43,7 @@ if __name__ == '__main__':
 	# Content Realization
 	# process sentences to make well-formed
 	# return a 2D array of well-formed sentences in order for each topic
-#	summaries = realize_content(summaries_in_order)
+	summaries = realize_content(summaries_in_order)
 
 	# Write summary to file for each topic
 #	summary_files = write_summary_files(summaries)
