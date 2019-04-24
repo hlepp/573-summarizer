@@ -3,10 +3,30 @@
 
 """Content Selector for multi-document text summarization that ranks and chooses the sentences to use in the summary."""
 
-__author__ = "Shannon Ladymon"
-__email__ = "sladymon@uw.edu"
+__author__ = "Shannon Ladymon, Haley Lepp"
+__email__ = "sladymon@uw.edu, hlepp@uw.edu"
 
 from data_input import Topic, Document, Sentence
+import math
+
+def _cosine_similarity(sentence_1, sentence_2):
+	"""
+	returns cosine similarity of two sentence objects
+	"""
+	numerator = 0
+	denominator_1 = 0
+	denominator_2 = 0
+	for i in sentence_1.tf_idf.keys()
+		numerator += sentence_1.tf_idf.get(i) * sentence_2.tf_idf.get(i, 0.0)
+		denominator_1 += sentence_1.tf_idf.get(i) ** 2
+	for i in sentence_2.tf_idf.values():
+		denominator_2 += i * i
+	denominator = math.sqrt(denominator_1 * denominator_2)
+	if denominator != 0:
+		return numerator / denominator
+	else:
+		return denominator	
+
 
 def select_content(topics_list):
 	"""
@@ -39,12 +59,13 @@ def select_content(topics_list):
 		# Add sentences as long as there are <= 100 tokens
 		for doc in topic_docs_list:
 
-			doc_date = doc.dateline
+			doc_date = doc.date
 
 			for sent_obj in doc.sentence_list:
 
 				sent = sent_obj.original_sentence
-
+				
+				#example call: _cosine_similarity(sent_obj, sent_obj)
 				# Sentence length is the number of words
 				# which are space delimited
 				sent_len = sent.count(" ") + 1
