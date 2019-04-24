@@ -4,12 +4,15 @@
 __author__ = "Benny Longwill"
 __email__ = "longwill@uw.edu"
 
-from nltk import sent_tokenize
-from nltk import word_tokenize
+from nltk import word_tokenize, sent_tokenize
+from nltk.corpus import stopwords
+
 from bs4 import BeautifulSoup
 import document_retriever
 from math import log
-#import blingfire
+#from blingfire import text_to_words, text_to_sentences
+
+stop_words = set(stopwords.words('english'))
 
 
 #### Put none for non-existing text
@@ -25,6 +28,23 @@ class Topic:
         self.document_list=[]
         self.summary = []
         self.idf={}
+
+    #Returns list of all sentences in Topic, including Title sentence, narrative sentences, and headlines
+    def all_sentences(self)->list:
+
+        total_sentences=[sentence for document in self.document_list for sentence in document.sentence_list]
+
+        # checks the title in the topic
+        if self.title:
+            total_sentences.append(self.title)
+        # checks the narrative in the topic
+        if self.narrative:
+            total_sentences.append(self.narrative)
+
+            # checks all headlines if available in every document in the topic
+        total_sentences += [document.headline for document in self.document_list if document.headline]
+
+        return total_sentences
 
     ##### Counts the sentences under this topic that contains a token parameter
     def n_containing(self, token):
@@ -45,6 +65,9 @@ class Topic:
 
         return count
 
+
+    #Take the ratio of the total number of documents to the number of documents containing any word.
+    #Then it adds 1 to the devisor to avoid zero division and then takes the log otherwise the weight will be too high
     def get_idf(self, token):
         if token in self.idf:
            return self.idf[token]
@@ -53,6 +76,7 @@ class Topic:
             self.idf[token]=current_idf
             return current_idf
 
+    # Must be used after all Documents, Sentences, and Tokens have been filled.
     def compute_tf_idf(self):
         for doc in self.document_list:
 
@@ -73,6 +97,7 @@ class Document:
         self.category=category ##### *** Not all topics have this attribute ***
         self.sent_count=0
         self.sentence_list=[]
+        self.parent_topic.doc_count+=1 ### Increments parent count When initialized
 
     def __repr__(self):
         return " ".join(self.sentence_list)
@@ -85,9 +110,14 @@ class Sentence:
         self.score=0
         self.parent_doc=parent_doc
         self.original_sentence=original_sentence
-        self.sent_len = original_sentence.count(" ") + 1
+        self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
         self.token_list=[]   ##### *** List of non-duplicate Tokens as Objects ***
         self.tf_idf={}
+
+        # Increments parent count when initialized. If parent_doc is Document, then Topic sent_count is also incremented
+        self.parent_doc.sent_count+=1
+        if type(self.parent_doc) is Document:
+            self.parent_doc.parent_topic.sent_count+=1
 
     def __repr__(self):
         return self.original_sentence
@@ -134,10 +164,18 @@ def get_data(file_paths:list)->list:
 
 #Tokenizes a sentences and populates the sentence object with a token object list
 def populate_token_list(current_sent:Sentence, original_sentence:str):
+
+    #Edits the original sentence to remove article formatting
+    # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
+    original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
+    current_sent.original_sentence=original_sentence
+
     tokenized_sent = word_tokenize(original_sentence)
     tokenized_sent_len = len(tokenized_sent)
     for token in set(tokenized_sent):
-        current_sent.token_list.append(Token(current_sent, token, tokenized_sent.count(token) / tokenized_sent_len))
+        ''''######### Removes stop words #########'''''
+        if token not in stop_words:
+            current_sent.token_list.append(Token(current_sent, token, tokenized_sent.count(token) / tokenized_sent_len))
 
 #Takes Document object and the text from doc file. The block of text is separated into sentences as sentence objects and also tokenized using NLTK.
 def populate_sentence_list(current_doc, doc_text):
@@ -145,15 +183,12 @@ def populate_sentence_list(current_doc, doc_text):
     doc_sentences = sent_tokenize(doc_text)
 
     for doc_sentence in doc_sentences:
-        doc_sentence = doc_sentence.replace("\n", " ").strip().replace("  ", " ")
 
         current_sentence=Sentence(current_doc, doc_sentence)
 
         populate_token_list(current_sentence, doc_sentence)
 
         current_doc.sentence_list.append( current_sentence )  ############## Creates sentence object
-
-    current_doc.sent_count+=len(current_doc.sentence_list)
 
 #Takes a Topic class object, an xml or html document set element, and a document retriever object
 # Itterates all document Id's in html/xml element and uses the doc retriever to get the raw document from database
@@ -175,16 +210,12 @@ def populate_document_list(current_topic, docsetA, doc_ret:document_retriever.Do
             headline_sentence = Sentence(current_doc, headline)
             populate_token_list(headline_sentence, headline)
             current_doc.headline = headline_sentence
-            current_doc.sent_count+=1
-            current_topic.sent_count += 1
         ##########################################################
 
 
         populate_sentence_list(current_doc, doc_text)
-        current_topic.sent_count += len(current_doc.sentence_list)
 
         current_topic.document_list.append(current_doc)
-    current_topic.doc_count+=len(current_topic.document_list)
 
 # Takes the raw topic xml/html and a set of title, narrative, and docset TAGS according to the format of file
 # extracts the respective text including document IDs for Aqcuaint(2) database
@@ -261,7 +292,6 @@ def get_topics_list(task_data:str)->list:
         title_sentence=Sentence(current_topic,title)
         populate_token_list(title_sentence, title)
         current_topic.title=title_sentence
-        current_topic.sent_count+=1
         ##########################################################
 
 
@@ -270,7 +300,6 @@ def get_topics_list(task_data:str)->list:
             narrative_sentence = Sentence(current_topic, narrative)
             populate_token_list(narrative_sentence, narrative)
             current_topic.narrative=narrative_sentence
-            current_topic.sent_count += 1
         ##########################################################
 
 
