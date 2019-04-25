@@ -6,8 +6,9 @@
 __author__ = "Shannon Ladymon, Haley Lepp"
 __email__ = "sladymon@uw.edu, hlepp@uw.edu"
 
-from data_input import Topic, Document, Sentence
+from data_input import Topic, Document, Sentence, Token
 import math
+import numpy as np
 
 def _cosine_similarity(sentence_1, sentence_2):
 	"""
@@ -16,7 +17,7 @@ def _cosine_similarity(sentence_1, sentence_2):
 	numerator = 0
 	denominator_1 = 0
 	denominator_2 = 0
-	for i in sentence_1.tf_idf.keys()
+	for i in sentence_1.tf_idf.keys():
 		numerator += sentence_1.tf_idf.get(i) * sentence_2.tf_idf.get(i, 0.0)
 		denominator_1 += sentence_1.tf_idf.get(i) ** 2
 	for i in sentence_2.tf_idf.values():
@@ -28,10 +29,125 @@ def _cosine_similarity(sentence_1, sentence_2):
 		return denominator	
 
 
+def _build_sim_matrix(sent_list, threshold):
+	"""
+	Builds and returns a 2D numpy matrix of inter-sentential cosine similarity.
+	"""
+	num_sent = len(sent_list)
+
+	# [num_sent] x [num_sent] matrix, defaulting to 0 for each similarity
+	sim_matrix = np.zeros((num_sent, num_sent))
+
+	# Fill the 2D numpy matrix with inter-sentential cosine similarity
+	for i in range(num_sent):
+
+		# only iterate over top half triangle of matrix
+		# since bottom half is identical
+		for j in range(i, num_sent):
+
+			# If the same sentence, default sim is 1.0
+			sim = 1.0
+
+			# For any different sentences
+			if i != j:
+				sim = _cosine_similarity(sent_list[i], sent_list[j])
+
+				sim_matrix[i][j] = sim
+				sim_matrix[j][i] = sim
+
+	# Normalize by dividing by sum of each row
+	row_sums = sim_matrix.sum(axis=1, keepdims=True)
+
+	# Change any row sum that is 0 to 1 to avoid division by 0
+	if 0 in row_sums:
+		row_sums[row_sums == 0] = 1
+
+
+	sim_matrix = sim_matrix / row_sums
+
+	return sim_matrix
+
+
+def _build_bias_vec(sent_list, topic_sent):
+	"""
+	Builds and returns a 1D numpy vector of the similarity between each sentence
+	and the topic title.
+	"""
+
+	# Holds the similarity for each sentence with the topic descritpion
+	num_sent = len(sent_list)
+
+	#1D matrix to hold the similiarity between each sentence and the topic
+	bias_vec = np.zeros(num_sent) 
+
+	# Get similarity for each sentence and the topic
+	for i in range(num_sent):
+	    bias_vec[i] = _cosine_similarity(sent_list[i], topic_sent)
+
+	# Normalize by dividing by the sum
+	bias_sum = np.sum(bias_vec)
+
+	# If the bias sum is 0, change to 1 to avoid division by 0
+	if bias_sum == 0:
+		bias_sum = 1
+
+	bias_vec = bias_vec / bias_sum
+
+	return bias_vec
+
+
+def _build_markov_matrix(sim_matrix, bias_vec, d):
+	"""
+	Builds and returns the markov matrix (matrix to multiply by in the power method)
+	using the Biased LexRank formula with cosine similarity.
+	"""
+	markov_matrix = (d * (bias_vec)) + ((1-d) * (sim_matrix))
+	# TODO: what to do for the Biased LexRank continuous part (multiply by the probs at the end?)
+
+	return markov_matrix
+
+
+def _power_method(markov_matrix, epsilon):
+	"""
+	Uses the power method to find the LexRank values of each sentence
+	and returns a 1D vector of the final LexRank values after convergence.
+	"""
+
+	num_sent = len(markov_matrix)
+
+	# Transpose the markov_matrix for power method calculations
+	transition_matrix = markov_matrix.T 
+
+	# Create an original vector of sentence probabilies
+	# using uniform distribution
+	prob_vec = np.ones(num_sent)/num_sent
+
+	# Iterate through power method until convergence
+	matrix_diff = 1.0
+	while matrix_diff > epsilon:
+
+	    # (M^T)(v) for power method
+	    updated_prob_vec = np.dot(transition_matrix, prob_vec)
+  
+	    # Get amount that the updated_prob_vec has changed
+	    # from the previous iteration, to see if converged
+	    matrix_diff = np.linalg.norm(np.subtract(updated_prob_vec, prob_vec))
+	    prob_vec = updated_prob_vec
+
+	# Return the prob_vec, which is the LexRank scores
+	return prob_vec
+
 def select_content(topics_list):
 	"""
 	TODO: Update once we've figured out what input this function receives
 	"""
+	# Default hyperparameter values 
+	# TODO: do tuning later to choose better values
+	d = 0.7  # damping factor, prioritizes similiarity with topic over inter-senential
+	threshold = 0.15  # inter-sentential similarity must be above
+	epsilon = 0.1  # in power method, matrix diff between iterations must be above
+
+
 	# TODO: Possibly do a check that topics_list is a list of Topic objects?
 
 	# A dictionary of topics with a list of the (sentence, date) 
@@ -39,9 +155,9 @@ def select_content(topics_list):
 	topic_summaries = {}
 	
 
-	# TODO: Use an actual algorithm later
-	# For now, adds sentences while <= 100 tokens
-	# TODO: check if number of tokens should include punctuation, etc.
+
+	# For each topic, choose the top LexRanked sentences
+	# up to 100 words
 	for topic in topics_list:
 
 		topic_id = topic.topic_id
@@ -56,25 +172,36 @@ def select_content(topics_list):
 		# Track the number of tokens so far in the summary
 		summary_size = 0
 
-		# Add sentences as long as there are <= 100 tokens
-		for doc in topic_docs_list:
+		# Get a list of all the sentence objects in this topic
+		total_sentences = [sent for doc in topic.document_list for sent in doc.sentence_list]
 
-			doc_date = doc.date
 
-			for sent_obj in doc.sentence_list:
+		# Build the inter-sentential cosine similarity matrix
+		sim_matrix = _build_sim_matrix(total_sentences, threshold)
 
-				sent = sent_obj.original_sentence
-				
-				#example call: _cosine_similarity(sent_obj, sent_obj)
-				# Sentence length is the number of words
-				# which are space delimited
-				sent_len = sent.count(" ") + 1
 
-				# Check if this sentence can be added to the summary
-				# (if there is room) and do so if possible
-				if summary_size + sent_len <= 100:
-					summary_size += sent_len
-					chosen_sent.append((sent, doc_date))
+		bias_vec = _build_bias_vec(total_sentences, topic_title)
+
+
+		markov_matrix = _build_markov_matrix(sim_matrix, bias_vec, d)
+
+		lex_rank_vec = _power_method(markov_matrix, epsilon)
+
+
+		# Add the lex_rank to each sentence.score
+		for i in range(len(total_sentences)):
+			total_sentences[i].score = lex_rank_vec[i]
+
+		# Sort the sentences by score
+		sorted_sentences = sorted(total_sentences, reverse=True)
+
+		# TODO: Haley and Amina - delete the code below with your own method
+		# of greedy/knapsack selection of sentences
+		for sent in sorted_sentences:
+			if summary_size + sent.sent_len <= 100:
+				summary_size += sent.sent_len
+				chosen_sent.append((sent.original_sentence, sent.parent_doc.date))
+
 
 		# Add the chosen_sent to the topic_summaries dict
 		topic_summaries[topic_id] = chosen_sent
