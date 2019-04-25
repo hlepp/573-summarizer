@@ -173,7 +173,8 @@ def select_content(topics_list):
 		summary_size = 0
 
 		# Get a list of all the sentence objects in this topic
-		total_sentences = [sent for doc in topic.document_list for sent in doc.sentence_list]
+		# Don't include sentences that are less than 5 words
+		total_sentences = [sent for doc in topic.document_list for sent in doc.sentence_list if sent.sent_len >=5]
 
 
 		# Build the inter-sentential cosine similarity matrix
