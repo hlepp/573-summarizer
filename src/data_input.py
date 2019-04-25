@@ -86,7 +86,8 @@ class Topic:
                     for token in sentence.token_list:
                         token_value=token.token_value
 
-                        sentence.tf_idf[token]=token.tf*self.get_idf(token_value)
+#                        sentence.tf_idf[token]=token.tf*self.get_idf(token_value)
+                        sentence.tf_idf[token_value]=token.tf*self.get_idf(token_value)
 
 class Document:
     def __init__(self, parent_topic:Topic , doc_id:str, headline:str=None,date:str=None, category:str=None):
