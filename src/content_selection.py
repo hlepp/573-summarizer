@@ -196,10 +196,10 @@ def select_content(topics_list):
         # Sort the sentences by score
         sorted_sentences = sorted(total_sentences, reverse=True)
 
-        # TODO: Haley and Amina - delete the code below with your own method
-        # of greedy/knapsack selection of sentences - updated 4/26 -AV
+        # Sentence selection- add sentences greedily based on ranking
+        # Sentences with high similarity to added sentences are not added
                 
-        # list of added sentence objects to compare for cosine similarity
+        # array of added sentence objects to compare for cosine similarity
         added_sents = []
 
         for sent_index in range(len(sorted_sentences)):
@@ -218,7 +218,7 @@ def select_content(topics_list):
                 # check if summary hasn't gone over the limit
                 if summary_size + sorted_sentences[sent_index].sent_len <= 100:
                 
-                    # check current sentence for cos similarity with the sentences already added
+                    # get cos similarity of current sentence with the sentences already added
                     cos_sim = [_cosine_similarity(sorted_sentences[sent_index], added_sent) for added_sent in added_sents]          
                             
                     # check if any cos sim is at or above the threshold= 0.15
