@@ -221,8 +221,8 @@ def select_content(topics_list):
                     # get cos similarity of current sentence with the sentences already added
                     cos_sim = [_cosine_similarity(sorted_sentences[sent_index], added_sent) for added_sent in added_sents]          
                             
-                    # check if any cos sim is at or above the threshold= 0.15
-                    similar = any(cos_similarity >= 0.15 for cos_similarity in cos_sim)
+                    # check if any cos sim is at or above threshold= 0.5
+                    similar = any(cos_similarity >= 0.5 for cos_similarity in cos_sim)
 
                     # if sentence is not similar to any of the already added sentences, add to chosen
                     if not similar:
