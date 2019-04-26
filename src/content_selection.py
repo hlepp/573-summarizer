@@ -197,37 +197,40 @@ def select_content(topics_list):
         sorted_sentences = sorted(total_sentences, reverse=True)
 
         # TODO: Haley and Amina - delete the code below with your own method
-        # of greedy/knapsack selection of sentences
+        # of greedy/knapsack selection of sentences - updated 4/26 -AV
                 
-        # set of rejected sentences that are similar to higher ranked sentences
-        rejected_sents = []
+        # list of added sentence objects to compare for cosine similarity
+        added_sents = []
 
-        for sent in sorted_sentences:
+        for sent_index in range(len(sorted_sentences)):
 
-            # check if sentence has not been rejected already and summary hasn't gone over the limit
-            if sent not in rejected_sents and summary_size + sent.sent_len <= 100:
+            # add first ranked sentence
+            if sent_index == 0:
+                chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
+                added_sents.append(sorted_sentences[sent_index])
+               
+                # update summary size
+                summary_size += sorted_sentences[sent_index].sent_len
+
+            # look at all other sentences            
+            else:
+
+                # check if summary hasn't gone over the limit
+                if summary_size + sorted_sentences[sent_index].sent_len <= 100:
                 
-                # check current sentence for cos similarity with the rest of sentences
-                cos_sim = [_cosine_similarity(sent, sent2) for sent2 in sorted_sentences]
-                        
-                # remove cos_sim of the current sentence to itself, it will equal 1
-                # indices position shift -1 in cos_sim array
-                del cos_sim[sorted_sentences.index(sent)]
-                        
-                # check if any cos sim is at or above the threshold= 0.15
-                sim_sents = [s for s in cos_sim if s >= threshold]
-            
-                # get indices of the similar sentences from cos_sim array
-                # add 1 to index to get correct index of sentence in sorted_sentences array
-                ind_sim_sents = [cos_sim.index(i)+1 for i in sim_sents]
-                    
-                # current sent is ranked higher than later sentences
-                # exclude later sentences that are similar
-                for sent_index in ind_sim_sents:
-                    rejected_sents.append(sorted_sentences[sent_index])
+                    # check current sentence for cos similarity with the sentences already added
+                    cos_sim = [_cosine_similarity(sorted_sentences[sent_index], added_sent) for added_sent in added_sents]          
+                            
+                    # check if any cos sim is at or above the threshold= 0.15
+                    similar = any(cos_similarity >= 0.15 for cos_similarity in cos_sim)
 
-                summary_size += sent.sent_len
-                chosen_sent.append((sent.original_sentence, sent.parent_doc.date))
+                    # if sentence is not similar to any of the already added sentences, add to chosen
+                    if not similar:
+                        chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
+                        added_sents.append(sorted_sentences[sent_index])
+
+                        # update summary size
+                        summary_size += sorted_sentences[sent_index].sent_len
 
 
         # Add the chosen_sent to the topic_summaries dict
