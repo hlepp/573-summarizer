@@ -102,8 +102,6 @@ def _build_markov_matrix(sim_matrix, bias_vec, d):
     using the Biased LexRank formula with cosine similarity.
     """
     markov_matrix = (d * (bias_vec)) + ((1-d) * (sim_matrix))
-    # TODO: what to do for the Biased LexRank continuous part (multiply by the probs at the end?)
-
     return markov_matrix
 
 
@@ -137,25 +135,75 @@ def _power_method(markov_matrix, epsilon):
     # Return the prob_vec, which is the LexRank scores
     return prob_vec
 
+
+def select_sentences(sorted_sentences):
+    """ 
+    Takes a list of sentences sorted by LexRank value (descending)
+    and selects the sentences to add to the summary greedily based on LexRank value
+    while excluding sentences with cosine similarity > 0.5
+    to any sentence already in the summary.
+    Returns a list of [(sentence, date)] for selected sentences.
+    """
+
+    # array of added sentence objects to compare for cosine similarity
+    added_sents = []
+
+    # List to hold tuples of (sentence, date)
+    # for each sentence chosen for the summary
+    chosen_sent = []
+
+    # Track the number of tokens so far in the summary
+    summary_size = 0
+
+    for sent_index in range(len(sorted_sentences)):
+
+        # add first ranked sentence
+        if sent_index == 0:
+            chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
+            added_sents.append(sorted_sentences[sent_index])
+               
+            # update summary size
+            summary_size += sorted_sentences[sent_index].sent_len
+
+        # look at all other sentences            
+        else:
+
+            # check if summary hasn't gone over the limit
+            if summary_size + sorted_sentences[sent_index].sent_len <= 100:
+                
+                # get cos similarity of current sentence with the sentences already added
+                cos_sim = [_cosine_similarity(sorted_sentences[sent_index], added_sent) for added_sent in added_sents]          
+                            
+                # check if any cos sim is at or above threshold= 0.5
+                similar = any(cos_similarity >= 0.5 for cos_similarity in cos_sim)
+
+                # if sentence is not similar to any of the already added sentences, add to chosen
+                if not similar:
+                    chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
+                    added_sents.append(sorted_sentences[sent_index])
+
+                    # update summary size
+                    summary_size += sorted_sentences[sent_index].sent_len
+
+    return chosen_sent
+
+
 def select_content(topics_list):
     """
-    TODO: Update once we've figured out what input this function receives
+    Takes in a list of Topic objects and creates summaries of <= 100 words
+    (full sentences only) using a Biased LexRank similarity graph algorithm
+    with tf-idf cosine similarity and a bias for query topic.
+    Returns a dictionary of {topic_id: [(sentence, date)]}.
     """
     # Default hyperparameter values 
-    # TODO: do tuning later to choose better values
     d = 0.7  # damping factor, prioritizes similiarity with topic over inter-senential
     threshold = 0.15  # inter-sentential similarity must be above
     epsilon = 0.1  # in power method, matrix diff between iterations must be above
-
-
-    # TODO: Possibly do a check that topics_list is a list of Topic objects?
 
     # A dictionary of topics with a list of the (sentence, date) 
     # which are chosen for the summary (<= 100 words)
     topic_summaries = {}
     
-
-
     # For each topic, choose the top LexRanked sentences
     # up to 100 words
     for topic in topics_list:
@@ -163,31 +211,23 @@ def select_content(topics_list):
         topic_id = topic.topic_id
         topic_title = topic.title
         topic_docs_list = topic.document_list
-        # TODO: Possibly grab the other variables like narrative
 
-        # List to hold tuples of (sentence, date)
-        # for each sentence chosen for the summary
-        chosen_sent = []
-
-        # Track the number of tokens so far in the summary
-        summary_size = 0
 
         # Get a list of all the sentence objects in this topic
         # Don't include sentences that are less than 5 words
         total_sentences = [sent for doc in topic.document_list for sent in doc.sentence_list if sent.sent_len >=5]
 
-
         # Build the inter-sentential cosine similarity matrix
         sim_matrix = _build_sim_matrix(total_sentences, threshold)
 
-
+        # Build the topic-sentence bias vec
         bias_vec = _build_bias_vec(total_sentences, topic_title)
 
-
+        # Build a Markov Matrix using the inter-sentential and bias similarities
         markov_matrix = _build_markov_matrix(sim_matrix, bias_vec, d)
 
+        # Get the Biased LexRank for the sentences using the power method
         lex_rank_vec = _power_method(markov_matrix, epsilon)
-
 
         # Add the lex_rank to each sentence.score
         for i in range(len(total_sentences)):
@@ -196,45 +236,8 @@ def select_content(topics_list):
         # Sort the sentences by score
         sorted_sentences = sorted(total_sentences, reverse=True)
 
-        # Sentence selection- add sentences greedily based on ranking
-        # Sentences with high similarity to added sentences are not added
-                
-        # array of added sentence objects to compare for cosine similarity
-        added_sents = []
-
-        for sent_index in range(len(sorted_sentences)):
-
-            # add first ranked sentence
-            if sent_index == 0:
-                chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
-                added_sents.append(sorted_sentences[sent_index])
-               
-                # update summary size
-                summary_size += sorted_sentences[sent_index].sent_len
-
-            # look at all other sentences            
-            else:
-
-                # check if summary hasn't gone over the limit
-                if summary_size + sorted_sentences[sent_index].sent_len <= 100:
-                
-                    # get cos similarity of current sentence with the sentences already added
-                    cos_sim = [_cosine_similarity(sorted_sentences[sent_index], added_sent) for added_sent in added_sents]          
-                            
-                    # check if any cos sim is at or above threshold= 0.5
-                    similar = any(cos_similarity >= 0.5 for cos_similarity in cos_sim)
-
-                    # if sentence is not similar to any of the already added sentences, add to chosen
-                    if not similar:
-                        chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
-                        added_sents.append(sorted_sentences[sent_index])
-
-                        # update summary size
-                        summary_size += sorted_sentences[sent_index].sent_len
-
-
-        # Add the chosen_sent to the topic_summaries dict
-        topic_summaries[topic_id] = chosen_sent
+        # Add the selected sentences to the topic_summaries dict
+        topic_summaries[topic_id] = select_sentences(sorted_sentences)
 
     # Return a dictionary of {topic: [(sent, date)]}
     return topic_summaries

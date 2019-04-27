@@ -1,4 +1,10 @@
-#!/opt/python-3.6/bin/python3
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""Runs ROUGE evaluation on the summary file results."""
+
+__author__ = "Haley Lepp"
+__email__ = "hlepp@uw.edu"
 
 import subprocess
 from subprocess import Popen, PIPE
