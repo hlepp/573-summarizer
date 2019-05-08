@@ -27,7 +27,7 @@ def write_summary_files(summaries):
 
     # Directory where output files should be
 
-    output_dir = 'outputs/D2/'
+    output_dir = 'outputs/' + folder + '/'
 
     # Variable to create unique ending for files
 
@@ -60,18 +60,18 @@ def write_summary_files(summaries):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('input_list')
     p.add_argument('d')
     p.add_argument('threshold')
     p.add_argument('epsilon')
+    p.add_argument('output_folder')
+    p.add_argument('input_list', nargs='*')
     args = p.parse_args()
-    input_list = [str(args.input_list)]
     d = float(args.d)
     threshold = float(args.threshold)
     epsilon = float(args.epsilon)
+    folder = str(args.output_folder)
+    input_list = args.input_list
 
-    # List of files for data input
-    # input_list = ['/dropbox/18-19/573/Data/Documents/devtest/GuidedSumm10_test_topics.xml']
 
     # Read in input data
     # and return a list of Topic objects (with Documents/Sentences)
