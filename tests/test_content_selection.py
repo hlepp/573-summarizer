@@ -11,7 +11,8 @@ import sys
 sys.path.append("../src")
 from content_selection import select_content
 from data_input import Topic, Document, Sentence, Token
-#import data_input
+from data_input import build_pesudo_topic
+#sys.path.remove("../src")
 
 class TestContentSelection(unittest.TestCase):
 
@@ -25,31 +26,10 @@ class TestContentSelection(unittest.TestCase):
 		self.threshold = 0.15
 		self.epsilon = 0.1
 
-		# Set up the topics
-		self.topic1 = Topic("Topic1", "A", "Testing topic 1")
-		self.topic2 = Topic("Topic2", "A", "Testing topic 2")
+		# Get a topic from the pseudo_topic.txt file
+		topic = build_pesudo_topic('../tests/pseudo_topic.txt')
+		print("TESTING: topic={}".format(topic.title))
 
-		# Set up the documents
-		self.doc1 = Document(self.topic1, "doc1")
-		self.doc2 = Document(self.topic2, "doc2")
-		self.topic1.document_list = [self.doc1]
-		self.topic2.document_list = [self.doc2]
-
-		# Set up the sentences
-		self.sent1a = Sentence(self.doc1, "This sentence is testing topic 1 for content selection.")
-		self.sent1b = Sentence(self.doc1, "This sentence is also testing topic 1 for content selection.")
-		self.sent2a = Sentence(self.doc2, "This sentence is testing topic 2.")
-		self.sent2b = Sentence(self.doc2, " ")
-		self.doc1.sentence_list = [self.sent1a, self.sent1b]
-		self.doc2.sentence_list = [self.sent2a, self.sent2b]
-
-		# TODO: get tokenization done
-
-
-		# TODO: set up idf for each topic, and tf_idf for each sentence
-
-		self.topics_list = [self.topic1, self.topic2]
-		# TODO: create list of topics w/documents & sentences
 
 	def _cosine_similarity(self):
 		pass
