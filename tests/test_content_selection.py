@@ -11,7 +11,7 @@ import sys
 sys.path.append("../src")
 from content_selection import select_content
 from data_input import Topic, Document, Sentence, Token
-from data_input import build_pesudo_topic
+from data_input import build_pseudo_topic
 
 class TestContentSelection(unittest.TestCase):
 
@@ -26,7 +26,7 @@ class TestContentSelection(unittest.TestCase):
 		self.epsilon = 0.1
 
 		# Get a topic from the pseudo_topic.txt file
-		topic = build_pesudo_topic('pseudo_topic.txt')
+		topic = build_pseudo_topic('pseudo_topic.txt')
 
 		# TODO: Remove after testing of build_pseudo_topic 
 		print("TESTING:\ntopic={}\ntopic_id={}\nnarrative={}\nidf={}".format(topic.title, topic.topic_id, topic.narrative, topic.idf))
