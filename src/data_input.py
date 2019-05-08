@@ -90,7 +90,7 @@ class Topic:
                         sentence.tf_idf[token_value]=token.tf*self.get_idf(token_value)
 
 class Document:
-    def __init__(self, parent_topic:Topic , doc_id:str, headline:str=None,date:str=None, category:str=None):
+    def __init__(self, parent_topic:Topic , doc_id:str=None, headline:str=None,date:str=None, category:str=None):
         self.parent_topic=parent_topic
         self.doc_id=doc_id
         self.headline=headline ##### *** Not all topics have this attribute ***
@@ -101,7 +101,7 @@ class Document:
         self.parent_topic.doc_count+=1 ### Increments parent count When initialized
 
     def __repr__(self):
-        return " ".join(self.sentence_list)
+        return str(self.sentence_list)
     # Less than method allows for sorting
     def __lt__(self, other):
         return (self.date < other.date)
@@ -313,3 +313,47 @@ def get_topics_list(task_data:str)->list:
     return topics
 
 ###############################
+
+
+'''''''''''''''''''''''''''''''''''''''''''''
+Method used to create dummy data structures for testing purposes
+'''''''''''''''''''''''''''''''''''''''''''''
+def build_pesudo_topic(pseudo_document_file_path):
+
+    #```doc_id = 1a \n date = 20110506 \n ### \n Sentence 1 would be here. \n Sentence 2 would be here, etc.```
+    # (where ### is a metadata separator and everything below that would be a sentence on its own line)
+
+    #Parses whole document by empty line
+    topic_header, pseudo_docs=open(pseudo_document_file_path).read().split("\n\n",maxsplit=1)
+    #Puts topic meta-data into dictionary
+    topic_header = dict([data.split("=") for data in topic_header.split("\n")])
+
+    #Loads empty topic object with topic metadata from dictionary
+    current_topic = Topic()
+    for key, value in topic_header.items():
+        try:
+            key=key.strip()
+            if key!= "docsetA_id" and key != "topic_id" :
+                setattr(current_topic,str(key),Sentence(parent_doc=current_topic, original_sentence=value))
+            else:
+                setattr(current_topic, str(key),value)
+        except:
+            print('malformatted_input')
+
+    #Separates documents then document metadata from sentences and loads them into a dictionary
+    #Calls populate sentences to finish filling remaining data structures
+    for doc in pseudo_docs.split("\n\n"):
+        meta_data, sentences=doc.split("###")
+        meta_data=dict([data.split("=") for data in meta_data.replace(" ","").split()])
+
+        current_doc=Document(parent_topic=current_topic)
+        for key,value in meta_data.items():
+            try:
+                setattr(current_doc, str(key), value)
+            except:
+                print('malformatted_input')
+
+        populate_sentence_list(current_doc=current_doc,doc_text=sentences.strip().replace("\n"," "))
+        current_topic.document_list.append(current_doc)
+
+    return current_topic
