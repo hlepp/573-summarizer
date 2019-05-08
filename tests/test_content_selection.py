@@ -12,7 +12,6 @@ sys.path.append("../src")
 from content_selection import select_content
 from data_input import Topic, Document, Sentence, Token
 from data_input import build_pesudo_topic
-#sys.path.remove("../src")
 
 class TestContentSelection(unittest.TestCase):
 
@@ -27,9 +26,14 @@ class TestContentSelection(unittest.TestCase):
 		self.epsilon = 0.1
 
 		# Get a topic from the pseudo_topic.txt file
-		topic = build_pesudo_topic('../tests/pseudo_topic.txt')
-		print("TESTING: topic={}".format(topic.title))
+		topic = build_pesudo_topic('pseudo_topic.txt')
 
+		# TODO: Remove after testing of build_pseudo_topic 
+		print("TESTING:\ntopic={}\ntopic_id={}\nnarrative={}\nidf={}".format(topic.title, topic.topic_id, topic.narrative, topic.idf))
+		for doc in topic.document_list:
+			print("\tdoc_id={}\n\tdate={}".format(doc.doc_id, doc.date))
+			for sent in doc.sentence_list:
+				print("\t\tsent={}\n\t\ttoken_list={}\n\t\ttf_idf={}, sent_len={}".format(sent.original_sentence, sent.token_list, sent.tf_idf, sent.sent_len))
 
 	def _cosine_similarity(self):
 		pass
