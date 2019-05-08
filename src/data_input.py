@@ -318,42 +318,43 @@ def get_topics_list(task_data:str)->list:
 '''''''''''''''''''''''''''''''''''''''''''''
 Method used to create dummy data structures for testing purposes
 '''''''''''''''''''''''''''''''''''''''''''''
-def build_pesudo_topic(pseudo_document_file_path):
+def build_pseudo_topic(pseudo_document_file_path):
 
     #```doc_id = 1a \n date = 20110506 \n ### \n Sentence 1 would be here. \n Sentence 2 would be here, etc.```
     # (where ### is a metadata separator and everything below that would be a sentence on its own line)
+    with open(pseudo_document_file_path) as file:
+        #Parses whole document by empty line
+        topic_header, pseudo_docs=file.read().split("\n\n", maxsplit=1)
+        #Puts topic meta-data into dictionary
+        topic_header = dict([data.split("=") for data in topic_header.split("\n")])
 
-    #Parses whole document by empty line
-    topic_header, pseudo_docs=open(pseudo_document_file_path).read().split("\n\n",maxsplit=1)
-    #Puts topic meta-data into dictionary
-    topic_header = dict([data.split("=") for data in topic_header.split("\n")])
-
-    #Loads empty topic object with topic metadata from dictionary
-    current_topic = Topic()
-    for key, value in topic_header.items():
-        try:
-            key=key.strip()
-            if key!= "docsetA_id" and key != "topic_id" :
-                setattr(current_topic,str(key),Sentence(parent_doc=current_topic, original_sentence=value))
-            else:
-                setattr(current_topic, str(key),value)
-        except:
-            print('malformatted_input')
-
-    #Separates documents then document metadata from sentences and loads them into a dictionary
-    #Calls populate sentences to finish filling remaining data structures
-    for doc in pseudo_docs.split("\n\n"):
-        meta_data, sentences=doc.split("###")
-        meta_data=dict([data.split("=") for data in meta_data.replace(" ","").split()])
-
-        current_doc=Document(parent_topic=current_topic)
-        for key,value in meta_data.items():
+        #Loads empty topic object with topic metadata from dictionary
+        current_topic = Topic()
+        for key, value in topic_header.items():
             try:
-                setattr(current_doc, str(key), value)
+                key=key.strip()
+                if key!= "docsetA_id" and key != "topic_id" :
+                    setattr(current_topic,str(key),Sentence(parent_doc=current_topic, original_sentence=value))
+                else:
+                    setattr(current_topic, str(key),value)
             except:
                 print('malformatted_input')
 
-        populate_sentence_list(current_doc=current_doc,doc_text=sentences.strip().replace("\n"," "))
-        current_topic.document_list.append(current_doc)
+        #Separates documents then document metadata from sentences and loads them into a dictionary
+        #Calls populate sentences to finish filling remaining data structures
+        for doc in pseudo_docs.split("\n\n"):
+            meta_data, sentences=doc.split("###")
+            meta_data=dict([data.split("=") for data in meta_data.replace(" ","").split()])
 
-    return current_topic
+            current_doc=Document(parent_topic=current_topic)
+            for key,value in meta_data.items():
+                try:
+                    setattr(current_doc, str(key), value)
+                except:
+                    print('malformatted_input')
+
+            populate_sentence_list(current_doc=current_doc,doc_text=sentences.strip().replace("\n"," "))
+            current_topic.document_list.append(current_doc)
+
+        current_topic.compute_tf_idf()
+        return current_topic
