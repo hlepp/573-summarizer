@@ -104,6 +104,7 @@ if __name__ == '__main__':
     # Evaluates summaries for each topic
     # by running ROUGE-1 & ROUGE-2
 
-    eval_summary()
+    eval_summary(folder)
+
 
 			
