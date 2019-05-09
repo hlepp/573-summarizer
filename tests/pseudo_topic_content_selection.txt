@@ -7,7 +7,7 @@ date = 20110506
 ###
 This is sentence 1.
 This is sentence 2.
-This is sentence 3.
+Number 3 is completely different!
 
 doc_id = 1b
 date = 20110507

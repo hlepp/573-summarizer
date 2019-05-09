@@ -17,9 +17,6 @@ from data_input import build_pseudo_topic
 
 class TestContentSelection(unittest.TestCase):
 
-	# TODO: Add setUp(), tearDown() methods
-	# for what to do before/after each test method
-
 	def setUp(self):
 
 		# Set up values for parameters
@@ -38,115 +35,107 @@ class TestContentSelection(unittest.TestCase):
 		sim_same_sentence = content_selection._cosine_similarity(self.sent_list[0], self.sent_list[0])
 		self.assertEqual(sim_same_sentence, 1)
 
-		# TODO: What's the best way to do this?
-		# TODO: Best way is to compare sims where one should always be higher than the other
-		# --> so, make another sentence which is vastly different, and compare that
 
-
-		# Get the example sentence values & expected similiarity
-		s0_tfidfs = self.sent_list[0].tf_idf
-		s1_tfidfs = self.sent_list[1].tf_idf
-		num = (s0_tfidfs['This'] * s1_tfidfs['This']) +  (s0_tfidfs['sentence'] * s1_tfidfs['sentence']) + (s0_tfidfs['.'] * s1_tfidfs['.'])
-
-		s0_squared = [num * num for num in s0_tfidfs.values()]	
-		d0 = sum(s0_squared)
-		s1_squared = [num * num for num in s1_tfidfs.values()]
-		d1 = sum(s1_squared)
-		expected_s0_s1 = num / (math.sqrt(d0) * math.sqrt(d1))
-	
-		# Test that two sentences have correct similarity
-		# For the pseudo_topic_content_selection.txt file,
-		# sent_list[0] and sent_list[1] should have sim= 0.3407
+		# Test that sentences with more words in common have greater similarity
+		# Using the test: s0 ("This is sentence 1.") and s1 ("This is sentence 2.")
+		# have greater similarity than s0 and s2 ("Number 3 is completely different!")
 		sim_s0_s1 = content_selection._cosine_similarity(self.sent_list[0], self.sent_list[1])
-		self.assertAlmostEqual(sim_s0_s1, expected_s0_s1, places=4)
+		sim_s0_s2 = content_selection._cosine_similarity(self.sent_list[0], self.sent_list[2])
+		self.assertTrue(sim_s0_s1 > sim_s0_s2)
 
 
 	def test_build_sim_matrix(self):
 
-		# When no sentences, returns an empty np matrix (size==0)
+		# Test that when no sentences, returns an empty np matrix (size==0)
 		sim_matrix_none = content_selection._build_sim_matrix([], self.threshold)
 		self.assertEqual(sim_matrix_none.size, 0)
 
-		# When 1 sentence, returns an np matrix with one value
+		# Test that When 1 sentence, returns an np matrix with a value of 1
 		sim_matrix_one = content_selection._build_sim_matrix([self.sent_list[0]], self.threshold)
 		self.assertEqual(sim_matrix_one[0][0], 1.0)
 
-
-		# TODO: Better test instead:
-		# Check that M = M^T
-		# Check that each row sums to 1
-		# So, instead of checking exact expected value, 
-		# check that it has the CHARACTERISTICS you expect
-
-		# When 2 different sentences, return a 2x2 matrix with sims
+		# Test that a matrix with two different sentences 
+		# is identical to its transpose (top triangle should be the same as bottom)
 		sim_matrix_two = content_selection._build_sim_matrix([self.sent_list[0], self.sent_list[1]], self.threshold)
-		sim_s0_s1 = content_selection._cosine_similarity(self.sent_list[0], self.sent_list[1])
-		row_sum = sim_s0_s1 + 1.0
+		transpose_sim_matrix_two = sim_matrix_two.T
+		self.assertTrue(np.array_equal(sim_matrix_two, transpose_sim_matrix_two))
 
-		self.assertAlmostEqual(sim_matrix_two[0][0], 1.0/row_sum)
-		self.assertAlmostEqual(sim_matrix_two[0][1], sim_s0_s1/row_sum) 
-		self.assertAlmostEqual(sim_matrix_two[1][0], sim_s0_s1/row_sum) 
-		self.assertAlmostEqual(sim_matrix_two[1][1], 1.0/row_sum) 
+		# Test that a matrix with two different sentences
+		# has rows that add up to one 
+		row_sums = np.sum(sim_matrix_two, axis=1)
+		one_vec = np.array([1.0, 1.0])
+		self.assertTrue(np.array_equal(row_sums, one_vec))
 
 
 	def test_build_bias_vec(self):
 
-		# When no sentences, returns an empty vector (size==0)
+		# Test that when no sentences, returns an empty vector (size==0)
 		bias_vec_none = content_selection._build_bias_vec([], self.topic.title)
 		self.assertEqual(bias_vec_none.size, 0)
 
-		# When one sentence which is identical to the topic
+		# Test that all bias vectors sum to 1
+
+		# One identical sentence
 		bias_vec_identical = content_selection._build_bias_vec([self.topic.title], self.topic.title)
-		expected_identical_sim = content_selection._cosine_similarity(self.topic.title, self.topic.title)
-		self.assertEqual(bias_vec_identical[0], 1.0)
+		self.assertEqual(np.sum(bias_vec_identical), 1.0)
 
-		# TODO: instead of exact value,
-		# check that entire vec sums to 1
-		# can also check shape
+		# One different sentence
+		bias_vec_one = content_selection._build_bias_vec([self.sent_list[0]], self.topic.title)
+		self.assertEqual(np.sum(bias_vec_one), 1.0)
 
-
-		# When one sentence which is different from the topic
-		bias_vec_diff = content_selection._build_bias_vec([self.sent_list[0]], self.topic.title)
-		expected_diff_sim = content_selection._cosine_similarity(self.sent_list[0], self.topic.title)
-#		self.assertAlmostEqual(bias_vec_diff[0], expected_diff_sim)
-# TODO: Figure out why the above doesn't work
+		# Two different sentences
+		bias_vec_two = content_selection._build_bias_vec([self.sent_list[0], self.sent_list[1]], self.topic.title)
+		self.assertEqual(np.sum(bias_vec_two), 1.0)
 
 	
 	def test_build_markov_matrix(self):
 
-		# When empty sim_matrix and bias_vec, returns an empty matrix
+		# Test that when empty sim_matrix and bias_vec, returns an empty matrix
 		sim_matrix_none = np.zeros((0,0))
 		bias_vec_none = np.zeros(0)
 		markov_matrix_none = content_selection._build_markov_matrix(sim_matrix_none, bias_vec_none, self.d)
 		self.assertEqual(markov_matrix_none.size, 0)
 
-		# When sim_matrix has one element of 1 and bias_vec has 0
+		# Test that when sim_matrix has one element of 1 and bias_vec has 0
+		# the resulting value is the same as 1 - d
 		expected_m_m_one = 1 - self.d
 		sim_matrix_one = np.array([1.0])	
 		bias_vec_one_empty = np.zeros(1)
 		markov_matrix_one = content_selection._build_markov_matrix(sim_matrix_one, bias_vec_one_empty, self.d)
 		self.assertAlmostEqual(markov_matrix_one[0], expected_m_m_one)
 
-		# When sim_matrix has one element of 1 and bias_vec has 1
-		expected_m_m_one_one = 1.0
+		# Test that when sim_matrix has one element of 1 and bias_vec has 1
+		# the resulting value of 1
 		bias_vec_one = np.array([1.0])
 		markov_matrix_one_one = content_selection._build_markov_matrix(sim_matrix_one, bias_vec_one, self.d)
-		self.assertAlmostEqual(markov_matrix_one_one[0], expected_m_m_one_one)
+		self.assertAlmostEqual(markov_matrix_one_one[0], 1.0)
 
 
 	def test_power_method(self):
-		pass
-		# TODO: What should be tested here?
-		# check that it returns a nx1 vec
-		# check that the returned vec sums to 1
 
+		# Test that when an empty matrix, returns an empty vec
+		m_matrix_none = np.zeros((0,0))
+		prob_vec_none = content_selection._power_method(m_matrix_none, self.epsilon)
+		self.assertEqual(prob_vec_none.size, 0)
+
+		# Test that when a matrix of a single value
+		# returns a vec that sums to 1
+		m_matrix_one = np.array([1.0])
+		prob_vec_one = content_selection._power_method(m_matrix_one, self.epsilon)
+		self.assertEqual(np.sum(prob_vec_one), 1.0)
+
+		# Test that when a matrix of two values
+		# returns a vec that sums to 1
+		m_matrix_two = np.array([[0.5, 0.5], [0.3, 0.7]])
+		prob_vec_two = content_selection._power_method(m_matrix_two, self.epsilon)
+		self.assertEqual(np.sum(prob_vec_two), 1.0)
 
 
 	def test_select_sentences(self):
 		pass
-		# TODO: test somehow (maybe change to add a second doc with a different date)
+		# TODO: test after changes are made to this function
 
-		# check that length is correct
+		# check that length (number of words) is correct
 		# check that score of sentences is ranked correctly
 		# check that no sentence is above .5 cosine sim (excluding self)
 
