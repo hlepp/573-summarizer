@@ -31,6 +31,8 @@ def write_summary_files(summaries):
 
     # Variable to create unique ending for files
 
+    # TODO: change to be the folder name
+    # once ROUGE can process that output
     numeric_count = 1
 
     for topic_id in summaries:
@@ -81,15 +83,16 @@ if __name__ == '__main__':
     # Content Selection
     # identifies salient sentences & ranks them
     # & chooses up to 100 words (using full sentences)
-    # returns a dictionary of {topic_id: [(sentence, date)]}
+    # Returns the list of topics with each topic.summary variable
+    # modified to include a list of sentences to include
 
-    topic_summaries = select_content(topics)
+    topics_with_summaries = select_content(topics)
 
     # Information Ordering
     # orders sentences by date for each topic
     # returns a dictionary of {topic_id: [sentences]}
 
-    summaries_in_order = order_info(topic_summaries)
+    summaries_in_order = order_info(topics_with_summaries)
 
     # Content Realization
     # process sentences to make well-formed
