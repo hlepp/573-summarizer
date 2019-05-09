@@ -87,18 +87,13 @@ class TestContentSelection(unittest.TestCase):
 		# When one sentence which is identical to the topic
 		bias_vec_identical = content_selection._build_bias_vec([self.topic.title], self.topic.title)
 		expected_identical_sim = content_selection._cosine_similarity(self.topic.title, self.topic.title)
-#		print("TESTING: identical_sim={}\ntopic type={}".format(expected_identical_sim, type(self.topic.title)))
-#		print("TESTING: title.token_list={}, title.tf_idf={}".format(self.topic.title.token_list, self.topic.title.tf_idf))
-#		print("TESTING identical={}".format(bias_vec_identical[0]))
-
-		# TODO: currently this won't work since topic.title doesn't have tokens or tf_idf
-		# wait until that is fixed, and then this should work
-#		self.assertEqual(bias_vec_identical[0], 1.0)
+		self.assertEqual(bias_vec_identical[0], 1.0)
 
 		# When one sentence which is different from the topic
 		bias_vec_diff = content_selection._build_bias_vec([self.sent_list[0]], self.topic.title)
 		expected_diff_sim = content_selection._cosine_similarity(self.sent_list[0], self.topic.title)
 #		self.assertAlmostEqual(bias_vec_diff[0], expected_diff_sim)
+# TODO: Figure out why the above doesn't work
 
 	
 	def test_build_markov_matrix(self):
