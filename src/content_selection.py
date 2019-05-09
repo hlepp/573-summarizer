@@ -45,23 +45,19 @@ def _build_sim_matrix(sent_list, threshold):
         # since bottom half is identical
         for j in range(i, num_sent):
 
-            # If the same sentence, default sim is 1.0
-            sim = 1.0
-
-            # For any different sentences
+            # Get the cosine similarity for different sentences
             if i != j:
                 sim = _cosine_similarity(sent_list[i], sent_list[j])
 
                 sim_matrix[i][j] = sim
                 sim_matrix[j][i] = sim
+            else:
+                # If the same sentence, sim is 1.0
+                sim_matrix[i][i] = 1.0
+
 
     # Normalize by dividing by sum of each row
     row_sums = sim_matrix.sum(axis=1, keepdims=True)
-
-    # Change any row sum that is 0 to 1 to avoid division by 0
-    if 0 in row_sums:
-        row_sums[row_sums == 0] = 1
-
 
     sim_matrix = sim_matrix / row_sums
 

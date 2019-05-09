@@ -1,0 +1,9 @@
+topic_id = D1871A
+title = This is a topic title.
+narrative = This is a topic narrative.
+
+doc_id = 1a
+date = 20110506
+###
+This is sentence 1.
+This is sentence 2.
