@@ -39,6 +39,10 @@ class TestContentSelection(unittest.TestCase):
 		self.assertEqual(sim_same_sentence, 1)
 
 		# TODO: What's the best way to do this?
+		# TODO: Best way is to compare sims where one should always be higher than the other
+		# --> so, make another sentence which is vastly different, and compare that
+
+
 		# Get the example sentence values & expected similiarity
 		s0_tfidfs = self.sent_list[0].tf_idf
 		s1_tfidfs = self.sent_list[1].tf_idf
@@ -67,6 +71,13 @@ class TestContentSelection(unittest.TestCase):
 		sim_matrix_one = content_selection._build_sim_matrix([self.sent_list[0]], self.threshold)
 		self.assertEqual(sim_matrix_one[0][0], 1.0)
 
+
+		# TODO: Better test instead:
+		# Check that M = M^T
+		# Check that each row sums to 1
+		# So, instead of checking exact expected value, 
+		# check that it has the CHARACTERISTICS you expect
+
 		# When 2 different sentences, return a 2x2 matrix with sims
 		sim_matrix_two = content_selection._build_sim_matrix([self.sent_list[0], self.sent_list[1]], self.threshold)
 		sim_s0_s1 = content_selection._cosine_similarity(self.sent_list[0], self.sent_list[1])
@@ -88,6 +99,11 @@ class TestContentSelection(unittest.TestCase):
 		bias_vec_identical = content_selection._build_bias_vec([self.topic.title], self.topic.title)
 		expected_identical_sim = content_selection._cosine_similarity(self.topic.title, self.topic.title)
 		self.assertEqual(bias_vec_identical[0], 1.0)
+
+		# TODO: instead of exact value,
+		# check that entire vec sums to 1
+		# can also check shape
+
 
 		# When one sentence which is different from the topic
 		bias_vec_diff = content_selection._build_bias_vec([self.sent_list[0]], self.topic.title)
@@ -121,17 +137,22 @@ class TestContentSelection(unittest.TestCase):
 	def test_power_method(self):
 		pass
 		# TODO: What should be tested here?
+		# check that it returns a nx1 vec
+		# check that the returned vec sums to 1
+
 
 
 	def test_select_sentences(self):
 		pass
 		# TODO: test somehow (maybe change to add a second doc with a different date)
 
+		# check that length is correct
+		# check that score of sentences is ranked correctly
+		# check that no sentence is above .5 cosine sim (excluding self)
 
-	def test_select_content(self):
-		pass
-		# TODO: figure out what to test on
 
+	# NOTE: no test for select_content, since that needs to be an integration test
+	# once we have a stable version and gold standard output
 
 if __name__ == '__main__':
 	unittest.main()
