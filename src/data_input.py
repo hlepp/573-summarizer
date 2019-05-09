@@ -108,6 +108,7 @@ class Document:
 
 class Sentence:
     def __init__(self,parent_doc:Document or Topic, original_sentence:str):
+        self.index=-1
         self.score=0
         self.parent_doc=parent_doc
         self.original_sentence=original_sentence
@@ -119,6 +120,7 @@ class Sentence:
         self.parent_doc.sent_count+=1
         if type(self.parent_doc) is Document:
             self.parent_doc.parent_topic.sent_count+=1
+            self.index = len(self.parent_doc.sentence_list)
 
     def __repr__(self):
         return self.original_sentence
@@ -145,6 +147,7 @@ class Token:
 
 title_tag='title'
 narrative_tag='narrative'
+category_tag='category'
 docsetA_tag='docseta'
 id_tag='id'
 doc_tag='doc'
@@ -220,7 +223,7 @@ def populate_document_list(current_topic, docsetA, doc_ret:document_retriever.Do
 
 # Takes the raw topic xml/html and a set of title, narrative, and docset TAGS according to the format of file
 # extracts the respective text including document IDs for Aqcuaint(2) database
-def get_topic_attributes(raw_topic, title_tag:str , narrative_tag:str, docsetA_tag:str):
+def get_topic_attributes(raw_topic, title_tag:str , narrative_tag:str, category_tag:str, docsetA_tag:str):
 
     narrative=None
     title=None
@@ -236,6 +239,12 @@ def get_topic_attributes(raw_topic, title_tag:str , narrative_tag:str, docsetA_t
         narrative_element = raw_topic.find(narrative_tag)
         if narrative_element is not None:
             narrative = narrative_element.text
+
+    if category_tag:
+        category_element=raw_topic.attrs.get(category_tag)
+        if category_element is not None:
+            print(category_element)
+
 
     docsetA = raw_topic.find(docsetA_tag)
 
@@ -284,7 +293,7 @@ def get_topics_list(task_data:str)->list:
     raw_topics = soup.findAll(topic_tag)
 
     for raw_topic in raw_topics:
-        topic_id, title, narrative, docsetA_id, docsetA = get_topic_attributes(raw_topic, title_tag, narrative_tag, docsetA_tag)
+        topic_id, title, narrative, docsetA_id, docsetA = get_topic_attributes(raw_topic, title_tag, narrative_tag,category_tag, docsetA_tag)
 
         current_topic= Topic(topic_id=topic_id,docsetA_id=docsetA_id) ########### Creates topic object
 
@@ -333,12 +342,14 @@ def build_pseudo_topic(pseudo_document_file_path):
         for key, value in topic_header.items():
             try:
                 key=key.strip()
-                if key!= "docsetA_id" and key != "topic_id" :
-                    setattr(current_topic,str(key),Sentence(parent_doc=current_topic, original_sentence=value))
+                if key == "title" or key == "narrative" :
+                    sent = Sentence(parent_doc=current_topic, original_sentence=value)
+                    populate_token_list(sent,value)
+                    setattr(current_topic,str(key),sent)
                 else:
                     setattr(current_topic, str(key),value)
-            except:
-                print('malformatted_input')
+            except Exception as e:
+                print(e)
 
         #Separates documents then document metadata from sentences and loads them into a dictionary
         #Calls populate sentences to finish filling remaining data structures
@@ -350,8 +361,8 @@ def build_pseudo_topic(pseudo_document_file_path):
             for key,value in meta_data.items():
                 try:
                     setattr(current_doc, str(key), value)
-                except:
-                    print('malformatted_input')
+                except Exception as e:
+                    print(e)
 
             populate_sentence_list(current_doc=current_doc,doc_text=sentences.strip().replace("\n"," "))
             current_topic.document_list.append(current_doc)
