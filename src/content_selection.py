@@ -10,6 +10,7 @@ from data_input import Topic, Document, Sentence, Token
 import math
 import numpy as np
 
+
 def _cosine_similarity(sentence_1, sentence_2):
     """
     returns cosine similarity of two sentence objects
@@ -48,6 +49,8 @@ def _build_sim_matrix(sent_list, threshold):
             # Get the cosine similarity for different sentences
             if i != j:
                 sim = _cosine_similarity(sent_list[i], sent_list[j])
+
+		# TODO: Only include similarities above the threshold
 
                 sim_matrix[i][j] = sim
                 sim_matrix[j][i] = sim
@@ -132,21 +135,19 @@ def _power_method(markov_matrix, epsilon):
     return prob_vec
 
 
-def select_sentences(sorted_sentences):
+def select_sentences(sorted_sentences, summary_threshold = 0.5):
     """ 
     Takes a list of sentences sorted by LexRank value (descending)
     and selects the sentences to add to the summary greedily based on LexRank value
-    while excluding sentences with cosine similarity > 0.5
+    while excluding sentences with cosine similarity >= summary_threshold (default = 0.5)
     to any sentence already in the summary.
-    Returns a list of [(sentence, date)] for selected sentences.
+    Returns a list of selected sentences.
     """
+
+    max_summary_size = 100
 
     # array of added sentence objects to compare for cosine similarity
     added_sents = []
-
-    # List to hold tuples of (sentence, date)
-    # for each sentence chosen for the summary
-    chosen_sent = []
 
     # Track the number of tokens so far in the summary
     summary_size = 0
@@ -155,7 +156,6 @@ def select_sentences(sorted_sentences):
 
         # add first ranked sentence
         if sent_index == 0:
-            chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
             added_sents.append(sorted_sentences[sent_index])
                
             # update summary size
@@ -165,23 +165,23 @@ def select_sentences(sorted_sentences):
         else:
 
             # check if summary hasn't gone over the limit
-            if summary_size + sorted_sentences[sent_index].sent_len <= 100:
+            if summary_size + sorted_sentences[sent_index].sent_len <= max_summary_size:
                 
                 # get cos similarity of current sentence with the sentences already added
                 cos_sim = [_cosine_similarity(sorted_sentences[sent_index], added_sent) for added_sent in added_sents]          
                             
-                # check if any cos sim is at or above threshold= 0.5
-                similar = any(cos_similarity >= 0.5 for cos_similarity in cos_sim)
+                # check if any cos sim is at or above the summary_threshold
+                similar = any(cos_similarity >= summary_threshold for cos_similarity in cos_sim)
 
-                # if sentence is not similar to any of the already added sentences, add to chosen
+                # if sentence is not similar to any of the already added sentences, add to list
                 if not similar:
-                    chosen_sent.append((sorted_sentences[sent_index].original_sentence, sorted_sentences[sent_index].parent_doc.date))
                     added_sents.append(sorted_sentences[sent_index])
 
                     # update summary size
                     summary_size += sorted_sentences[sent_index].sent_len
 
-    return chosen_sent
+    # Return the list of chosen sentences
+    return added_sents
 
 
 def select_content(topics_list):
@@ -189,7 +189,8 @@ def select_content(topics_list):
     Takes in a list of Topic objects and creates summaries of <= 100 words
     (full sentences only) using a Biased LexRank similarity graph algorithm
     with tf-idf cosine similarity and a bias for query topic.
-    Returns a dictionary of {topic_id: [(sentence, date)]}.
+    Modifies and returns the topics list by adding the list of selected sentences
+    to each topic.summary variable.
     """
     # Default hyperparameter values 
     d = 0.7  # damping factor, prioritizes similiarity with topic over inter-senential
@@ -207,7 +208,6 @@ def select_content(topics_list):
         topic_id = topic.topic_id
         topic_title = topic.title
         topic_docs_list = topic.document_list
-
 
         # Get a list of all the sentence objects in this topic
         # Don't include sentences that are less than 5 words
@@ -232,10 +232,11 @@ def select_content(topics_list):
         # Sort the sentences by score
         sorted_sentences = sorted(total_sentences, reverse=True)
 
-        # Add the selected sentences to the topic_summaries dict
-        topic_summaries[topic_id] = select_sentences(sorted_sentences)
+        # Select which sentences to use
+        # and add the list to this topic's summary variable
+        topic.summary = select_sentences(sorted_sentences)
 
-    # Return a dictionary of {topic: [(sent, date)]}
-    return topic_summaries
+    # Return the list of topics now that the summary has been added to each
+    return topics_list
 
 
