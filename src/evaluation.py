@@ -15,7 +15,7 @@ from subprocess import Popen, PIPE
 def change_xml(output_folder):
     default_xml = open('src/ROUGE/revised_config.xml', 'r')
     new_xml = open('src/ROUGE/revised_config_new.xml', 'w+')
-    if not os.path.exists(output_folder):
+    if not os.path.exists('outputs/' + output_folder):
         os.mkdir(output_folder)
     for line in default_xml:
         if line == 'outputs/D2\n':
