@@ -13,9 +13,9 @@ from math import log
 
 
 # Load your usual SpaCy model (one of SpaCy English models)
-import spacy
+#import spacy
 
-nlp = spacy.load("en")
+#nlp = spacy.load("en")
 
 #import neuralcoref
 #neuralcoref.add_to_pipe(nlp, max_dist=100)
