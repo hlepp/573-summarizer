@@ -82,7 +82,7 @@ if __name__ == '__main__':
     # Read in input data
     # and return a list of Topic objects (with Documents/Sentences)
 
-    topics = get_data(input_path,stemming=False,lower=True,idf_type='smooth_idf')
+    topics = get_data(input_path,stemming=False,lower=False,idf_type='smooth_idf')
 
     # Content Selection
     # identifies salient sentences & ranks them

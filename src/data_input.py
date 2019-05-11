@@ -123,23 +123,25 @@ class Topic:
 
     # Must be used after all Documents, Sentences, and Tokens have been filled.
     def compute_tf_idf(self):
-        for doc in self.document_list:
+        #for sentence in doc.sentence_list + [self.title, self.narrative,  doc.headline]:
+        for sentence in self.all_sentences():
+            if sentence:
 
-            #for sentence in doc.sentence_list + [self.title, self.narrative,  doc.headline]:
-            for sentence in self.all_sentences():
-                if sentence:
+                for token in sentence.token_list:
+                    token_value=token.token_value
 
-                    for token in sentence.token_list:
-                        token_value=token.token_value
+                    idf=0
+                    if Topic.idf_type=='smooth_idf':
+                        idf=self.get_smooth_idf(token_value)
+                    elif Topic.idf_type=='unary_idf':
+                        idf=self.get_unary_idf(token_value)
+                    elif Topic.idf_type=='standard_idf':
+                        idf= self.get_standard_idf(token_value)
+                    elif Topic.idf_type=='probabilistic_idf':
+                        idf= self.get_probabilistic_idf(token_value)
 
-                        if Topic.idf_type=='smooth_idf':
-                            sentence.tf_idf[token_value]=token.tf*self.get_smooth_idf(token_value)
-                        elif Topic.idf_type=='unary_idf':
-                            sentence.tf_idf[token_value] = token.tf * self.get_unary_idf(token_value)
-                        elif Topic.idf_type=='standard_idf':
-                            sentence.tf_idf[token_value] = token.tf * self.get_standard_idf(token_value)
-                        elif Topic.idf_type=='probabilistic_idf':
-                            sentence.tf_idf[token_value] = token.tf * self.get_probabilistic_idf(token_value)
+
+                    sentence.tf_idf[token_value] = token.tf * idf
 
 
 class Document:
@@ -260,8 +262,8 @@ headline_tag='headline'
 def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smooth_idf')->list:
     configure_class_objects(stemming,lower,idf_type)
 
-    with open(file_path) as file:
-        task_data = open(file_path).read()
+    with open(file_path) as f1:
+        task_data = f1.read()
 
         soup = BeautifulSoup(task_data, parser_tag)
         raw_topics = soup.findAll(topic_tag)
@@ -269,7 +271,7 @@ def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smo
     return get_topics_list(raw_topics, get_categories(file_path))
 
 # unary_idf smooth_idf standard_idf probabilistic_idf
-def configure_class_objects(stemming:bool=None,lower:bool=None, idf_type:str=None):
+def configure_class_objects(stemming:bool=False,lower:bool=False, idf_type:str=None):
 
     if stemming:
         Sentence.stemming = stemming
@@ -281,8 +283,8 @@ def configure_class_objects(stemming:bool=None,lower:bool=None, idf_type:str=Non
 def get_categories(file_path:str):
 
     try:
-        with open(file_path.rsplit("/",maxsplit=1)[0] + categories_file_tag) as file:
-            categories=file.read().replace(":","").replace("(","").replace(")","").replace("/"," ")
+        with open(file_path.rsplit("/",maxsplit=1)[0] + categories_file_tag) as f2:
+            categories=f2.read().replace(":","").replace("(","").replace(")","").replace("/"," ")
             #Splits on two empty lines in a row
             bag_of_words={}
             for category in categories.split("\n\n\n")[1:]:
@@ -411,9 +413,9 @@ def build_pseudo_topic(pseudo_document_file_path, stemming:bool=None, lower:bool
 
     #```doc_id = 1a \n date = 20110506 \n ### \n Sentence 1 would be here. \n Sentence 2 would be here, etc.```
     # (where ### is a metadata separator and everything below that would be a sentence on its own line)
-    with open(pseudo_document_file_path) as file:
+    with open(pseudo_document_file_path) as f1:
         #Parses whole document by empty line
-        topic_meta_data, pseudo_docs=file.read().split("\n\n", maxsplit=1)
+        topic_meta_data, pseudo_docs=f1.read().split("\n\n", maxsplit=1)
 
 
 
@@ -443,3 +445,9 @@ def build_pseudo_topic(pseudo_document_file_path, stemming:bool=None, lower:bool
 
         current_topic.compute_tf_idf()
         return current_topic
+
+
+#def build_pseudo_document:
+
+
+

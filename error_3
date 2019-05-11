@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "src/text_summarizer.py", line 10, in <module>
-    from data_input import get_data
-  File "/home2/longwill/Ling573/573-summarizer/src/data_input.py", line 18, in <module>
-    nlp = spacy.load("en")
-AttributeError: 'module' object has no attribute 'load'
