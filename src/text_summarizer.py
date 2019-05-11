@@ -69,19 +69,20 @@ if __name__ == '__main__':
     p.add_argument('threshold')
     p.add_argument('epsilon')
     p.add_argument('output_folder')
-    p.add_argument('input_list', nargs='*')
+    p.add_argument('input_file')
     args = p.parse_args()
     d = float(args.d)
     threshold = float(args.threshold)
     epsilon = float(args.epsilon)
     folder = str(args.output_folder)
-    input_list = args.input_list
+    input_path = str(args.input_file)
+
 
 
     # Read in input data
     # and return a list of Topic objects (with Documents/Sentences)
 
-    topics = get_data(input_list)
+    topics = get_data(input_path,stemming=False,lower=False,idf_type='smooth_idf')
 
     # Content Selection
     # identifies salient sentences & ranks them
