@@ -151,14 +151,14 @@ class Document:
         self.doc_id=doc_id
         self.date=date
         self.category=category ##### *** Not all topics have this attribute ***
-        self.sentence_list=[]
+        self.sentence_list = self.create_sentence_list(document_text)
         ############### Creates and adds headline Sentence Objects To Topic
         try:
             self.headline = Sentence(self,headline)  ##### *** Not all topics have this attribute ***
         except:
             self.headline=headline
         ##########################################################
-        self.populate_sentence_list(document_text)
+
         self.parent_topic.doc_count+=1 ### Increments parent count When initialized
 
     def __repr__(self):
@@ -168,13 +168,14 @@ class Document:
         return (self.date < other.date)
 
     # Takes Document object and the text from doc file. The block of text is separated into sentences as sentence objects and also tokenized using NLTK.
-    def populate_sentence_list(self, doc_text):
-        doc_sentences = sent_tokenize(doc_text)
+    def create_sentence_list(self, doc_text)->list:
+        sentence_list=[]
+        for doc_sentence in sent_tokenize(doc_text):
+            current_sentence=Sentence(self, doc_sentence)  #Creates sentence object
+            current_sentence.index=len(sentence_list)
+            sentence_list.append(current_sentence)
+        return sentence_list
 
-        for doc_sentence in doc_sentences:
-            current_sentence = Sentence(self, doc_sentence)
-
-            self.sentence_list.append(current_sentence)  ############## Creates sentence object
 
 class Sentence:
     stemming=False
@@ -188,15 +189,14 @@ class Sentence:
         self.parent_doc=parent_doc
         self.original_sentence=original_sentence
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
-        self.populate_token_list(self.original_sentence)  ##### *** List of non-duplicate Tokens as Objects ***
+        self.token_list=self.create_token_list(self.original_sentence)  ##### *** List of non-duplicate Tokens as Objects ***
         self.tf_idf={}
 
         # Increments parent count when initialized. If parent_doc is Document, then Topic sent_count is also incremented
         self.parent_doc.sent_count+=1
         if type(self.parent_doc) is Document:
-            self.index = -1
             self.parent_doc.parent_topic.sent_count+=1
-            self.index = len(self.parent_doc.sentence_list)
+            self.index = -1
 
     def __repr__(self):
         return self.original_sentence
@@ -210,11 +210,11 @@ class Sentence:
         return any(token.token_value == param for token in self.token_list)
 
     # Tokenizes a sentences and populates the sentence object with a token object list
-    def populate_token_list(self, original_sentence: str):
+    def create_token_list(self, original_sentence: str)->list:
         # Edits the original sentence to remove article formatting
         # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
         original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
-        self.token_list = []
+        token_list = []
 
         #if Sentence.stemming:
             #doc=nlp(original_sentence)
@@ -231,7 +231,8 @@ class Sentence:
                     token=token.lower()
 
 
-                self.token_list.append(Token(self, token, tokenized_sent.count(token) / tokenized_sent_len))
+                token_list.append(Token(self, token, tokenized_sent.count(token) / tokenized_sent_len))
+        return token_list
 
 class Token:
     def __init__(self,parent_sentence:Sentence, token_value:str, tf):
