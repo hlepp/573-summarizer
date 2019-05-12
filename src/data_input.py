@@ -222,58 +222,90 @@ class Sentence:
 
     # Tokenizes a sentences and populates the sentence object with a token object list
     def create_token_list(self, original_sentence: str)->list:
+
+        '''
+         # Edits the original sentence to remove article formatting
+         # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
+         original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
+         token_list = []
+
+         tokenized_sent = word_tokenize(original_sentence)
+         pos_tags = pos_tag(tokenized_sent)
+
+         if Sentence.lower:
+             pos_tags=[(token.lower(),pos) for token,pos in pos_tags]
+
+         if Sentence.stemming:  ##### THe stemmer also lowercases
+             pos_tags=[(Sentence.ps.stem(token),pos) for token,pos in pos_tags]
+
+         tokens=[token for token,pos in pos_tags]
+         ##### WITH POS TAGS, Duplicate words allowed as long as the POS is different
+         for token, pos in set(pos_tags):
+             ''''######### Removes stop words #########'''''
+             if token not in stop_words:
+
+                 if token not in self.tf_values:
+                     try:
+                         tf = eval('self.get_' + Topic.tf_type + '(tokens,token)')
+                     except:
+                         tf = self.get_term_frequency(tokens, token)
+                     self.tf_values.update({token:tf})
+                 else:
+                     tf=self.tf_values[token]
+
+                 token_list.append(Token(self, token, tf, pos))
+
+
+         return token_list
+         '''
+
         # Edits the original sentence to remove article formatting
         # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
         original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
         token_list = []
 
+        '''LOTS OF TOKEN LOOPING WITHIN SENT REQUIRED BECAUSE OF POS TAGGING'''
+        #Tokenize sentence
         tokenized_sent = word_tokenize(original_sentence)
 
+        #Must tokenize sentence before pos tagging
+        #Captures only Nouns and adds to self.nouns set
+        [self.nouns.add(token) for token,pos in pos_tag(tokenized_sent) if 'NN' in pos]
 
+        #Lowercasing before pos tagging affects tags, so must do after as list
         if Sentence.lower:
-            tokenized_sent = tokenized_sent.lower()
+            tokenized_sent = [token.lower() for token in tokenized_sent]
 
-        pos_tags=pos_tag(tokenized_sent)
+        #Can only stem one word at a time, can't stem whole sentence
+        if Sentence.stemming:  ##### THe stemmer also lowercases
+            tokenized_sent = [Sentence.ps.stem(token) for token in tokenized_sent]
 
-
-
-        ##### WITH POS TAGS, Duplicate words allowed as long as the POS is different
-        for token, pos in set(pos_tags):
+        for token in set(tokenized_sent):
             ''''######### Removes stop words #########'''''
             if token not in stop_words:
 
-                if Sentence.stemming:            ##### THe stemmer also lowercases
-                    token=Sentence.ps.stem(token)
+                try:
+                    tf = eval('self.get_' + Topic.tf_type + '(tokenized_sent,token)')
+                except:
+                    tf = self.get_term_frequency(tokenized_sent, token)
 
+                self.tf_values.update({token: tf})
 
-                if token not in self.tf_values:
-                    try:
-                        tf = eval('self.get_' + Topic.tf_type + '(tokenized_sent,token)')
-                    except:
-                        tf = self.get_term_frequency(tokenized_sent, token)
-                    self.tf_values.update({token:tf})
-                else:
-                    tf= self.tf_values[token]
-
-                token_list.append(Token(self, token, tf, pos))
+                token_list.append(Token(self, token, tf))
 
         return token_list
 
+
 class Token:
-    def __init__(self,parent_sentence:Sentence, token_value:str, tf, pos:str):
+    def __init__(self,parent_sentence:Sentence, token_value:str, tf): #, pos):
         self.tf=tf
         self.parent_sentence=parent_sentence
         self.token_value=token_value
-        self.pos = pos
-        if 'NN' in self.pos:
-            self.parent_sentence.nouns.add(token_value)
+        #self.pos=pos
+        #if 'NN' in self.pos:
+        #    self.parent_sentence.nouns.add(self.token_value)
     def __repr__(self):
         return self.token_value
-    def __hash__(self):
-        return hash(self.pos)
-    #def __eq__(self):
-      #  return self.token_value==self.token_value
-
 
 ###############################
 ### Tag Variables used to avoid hardcoding later in the document or in case of tag changes
