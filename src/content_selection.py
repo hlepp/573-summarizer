@@ -67,7 +67,7 @@ def _build_sim_matrix(sent_list, threshold):
     return sim_matrix
 
 
-def _build_bias_vec(sent_list, topic_sent, include_narrative = False, bias_formula = 0):
+def _build_bias_vec(sent_list, topic_sent, include_narrative = False, bias_formula = "cos"):
     """
     Builds and returns a 1D numpy vector of the similarity between each sentence
     and the topic title.
@@ -79,16 +79,19 @@ def _build_bias_vec(sent_list, topic_sent, include_narrative = False, bias_formu
     #1D matrix to hold the similiarity between each sentence and the topic
     bias_vec = np.zeros(num_sent) 
 
+    # Get the topic idf dictionary, which is needed in some calculations 
+    topic = topic_sent.parent_doc
+    topic_idf_dict = topic.idf
+
     # Get similarity for each sentence and the topic
     for i in range(num_sent):
 
-        # Use the specified bias formula
-        if bias_formula == 0:
-            bias_vec[i] = _cosine_similarity(sent_list[i], topic_sent)
-        else:
-            topic = topic_sent.parent_doc
-            topic_idf_dict = topic.idf
+        # Use the specified bias formula to calculate bias weight
+        if bias_formula == "rel":
             bias_vec[i] = _calc_relevance(sent_list[i], topic_sent, topic_idf_dict)
+        else:
+            # Default is cosine similarity
+            bias_vec[i] = _cosine_similarity(sent_list[i], topic_sent)
 
     # Normalize by dividing by the sum
     bias_sum = np.sum(bias_vec)
@@ -104,13 +107,12 @@ def _build_bias_vec(sent_list, topic_sent, include_narrative = False, bias_formu
 
 def _calc_relevance(sent, topic_sent, topic_idf_dict):
     "Calculates relevance for two sentences."
-    # TODO: Test that this works
 
     rel_sum = 0
 
-    # TODO: fix to devide by idf
-    for i in sent.tf_idf.keys():
-        rel_sum += math.log(sent.tf_idf.get(i) + 1) * math.log(topic_sent.tf_idf.get(i, 0.0) + 1) * topic_idf_dict.get(i) 
+    # Calculate the relevance based on the tf values for each word in 
+    for i in topic_sent.tf_values.keys():
+        rel_sum += math.log(sent.tf_values.get(i, 0.0) + 1) * math.log(topic_sent.tf_values.get(i) + 1) * topic_idf_dict.get(i) 
 
     return rel_sum
 
@@ -155,7 +157,7 @@ def _power_method(markov_matrix, epsilon):
     return prob_vec
 
 
-def select_sentences(sorted_sentences, summary_threshold = 0.5):
+def _select_sentences(sorted_sentences, summary_threshold = 0.5):
     """ 
     Takes a list of sentences sorted by LexRank value (descending)
     and selects the sentences to add to the summary greedily based on LexRank value
@@ -204,7 +206,7 @@ def select_sentences(sorted_sentences, summary_threshold = 0.5):
     return added_sents
 
 
-def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_threshold = 0.5, epsilon = 0.1, include_narrative = False, min_sent_len = 8, bias_formula = 0):
+def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_threshold = 0.5, epsilon = 0.1, include_narrative = False, min_sent_len = 8, bias_formula = "cos"):
     """
     For each topic, creates summaries of <= 100 words (full sentences only) 
     using a Biased LexRank similarity graph algorithm
@@ -218,7 +220,8 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
         epsilon: minimum amount of difference between probabilities between rounds of power method
         include_narrative: True if the narrative (in addition to title) should be in the bias
         min_sent_len: minimum number of words in a sentence to be used in the summary
-        bias_formula: which formula to use - 0 if cosine sim, 1 if ....??? TODO
+        bias_formula: which formula to use for sentence-topic similarity weighting - cos (cosine similarity), rel (relevance), or gen (generation probability)
+        intersent_formula: which formula to use for inter-sentential similarity weighting - cos (cosine similarity) or norm (normalized generation probability)
 
     Returns:
         topic_list: the modified topic_list from the input, with a list of selected sentences
@@ -246,7 +249,7 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
         sim_matrix = _build_sim_matrix(total_sentences, intersent_threshold)
 
         # Build the topic-sentence bias vec
-        bias_vec = _build_bias_vec(total_sentences, topic_title)
+        bias_vec = _build_bias_vec(total_sentences, topic_title, include_narrative, bias_formula)
 
         # Build a Markov Matrix using the inter-sentential and bias similarities
         markov_matrix = _build_markov_matrix(sim_matrix, bias_vec, d)
@@ -263,7 +266,7 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
 
         # Select which sentences to use
         # and add the list to this topic's summary variable
-        topic.summary = select_sentences(sorted_sentences, summary_threshold)
+        topic.summary = _select_sentences(sorted_sentences, summary_threshold)
 
     # Return the list of topics now that the summary has been added to each
     return topics_list
