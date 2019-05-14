@@ -65,14 +65,12 @@ def write_summary_files(topics_with_final_summaries):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
-    p.add_argument('data_type')
     p.add_argument('d')
     p.add_argument('threshold')
     p.add_argument('epsilon')
     p.add_argument('output_folder')
     p.add_argument('input_file')
     args = p.parse_args()
-    data_type = args.data_type # Either train, eval, or dev
     d = float(args.d)
     threshold = float(args.threshold)
     epsilon = float(args.epsilon)
@@ -115,7 +113,7 @@ if __name__ == '__main__':
     # Evaluates summaries for each topic
     # by running ROUGE-1 & ROUGE-2
 
-    eval_summary(folder, data_type)
+    eval_summary(folder)
 
 
 			
