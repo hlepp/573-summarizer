@@ -4,13 +4,29 @@
 __author__ = "Benny Longwill"
 __email__ = "longwill@uw.edu"
 
-from nltk import word_tokenize, sent_tokenize
+from nltk import word_tokenize, sent_tokenize, pos_tag, download, PorterStemmer, MWETokenizer
+#nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import stopwords
+
 
 from bs4 import BeautifulSoup
 import document_retriever
 from math import log
+import os  # os module imported here to open multiple files at once
+import itertools ### Used to find groups of consecutive similar items in list for NN
+
+
+
+# Load your usual SpaCy model (one of SpaCy English models)
+#import spacy
+
+#nlp = spacy.load("en")
+
+#import neuralcoref
+#neuralcoref.add_to_pipe(nlp, max_dist=100)
+#from nltk.stem import WordNetLemmatizer
 #from blingfire import text_to_words, text_to_sentences
+
 
 stop_words = set(stopwords.words('english'))
 
@@ -18,13 +34,18 @@ stop_words = set(stopwords.words('english'))
 #### Put none for non-existing text
 ###############################
 class Topic:
-    def __init__(self, topic_id:str=None ,docsetA_id:str=None,  title:str=None , narrative:str=None):
+    idf_type=None #### Default value
+    tf_type=None
+    def __init__(self, topic_id:str=None ,docsetA_id:str=None,  title:str=None , narrative:str=None, category=None):
+        self.doc_count = 0
+        self.sent_count = 0
         self.topic_id=topic_id
-        self.title=title
-        self.narrative=narrative ##### *** Not all topics have this attribute ***
         self.docsetA_id=docsetA_id
-        self.doc_count=0
-        self.sent_count=0
+        ############### Creates and adds title and narrative and category Sentence Objects To Topic
+        self.title = Sentence.create_sentence(self, title)
+        self.narrative = Sentence.create_sentence(self, narrative) ##### *** Not all topics have this attribute ***
+        self.category=Sentence.create_sentence(self,category) ##### *** Not all topics have this attribute ***
+        ##########################################################
         self.document_list=[]
         self.summary = []
         self.idf={}
@@ -53,8 +74,7 @@ class Topic:
             token in sentence)
 
         # checks all headlines if available in every document in the topic
-        count += sum(1 for document in self.document_list if document.headline if
-                    token in document.headline)
+        count += sum(1 for document in self.document_list if document.headline if token in document.headline)
 
         # checks the title in the topic
         if self.title and token in self.title:
@@ -68,7 +88,7 @@ class Topic:
 
     #Take the ratio of the total number of documents to the number of documents containing any word.
     #Then it adds 1 to the devisor to avoid zero division and then takes the log otherwise the weight will be too high
-    def get_idf(self, token):
+    def get_smooth_idf(self, token):
         if token in self.idf:
            return self.idf[token]
         else:
@@ -76,29 +96,59 @@ class Topic:
             self.idf[token]=current_idf
             return current_idf
 
+    #AKA unary IDF score, i.e. don't use IDF
+    def get_unary_idf(self):
+        return 1
+
+    #he logarithm of the number of documents in the corpus divided by the number of documents the term appears
+    # in (this will lead to negative scores for terms appearing in all documents in the corpus)
+    def get_standard_idf(self, token):
+        if token in self.idf:
+            return self.idf[token]
+        else:
+            current_idf = -log(self.n_containing(token)/self.sent_count)
+            self.idf[token] = current_idf
+            return current_idf
+
+    #similar to inverse but substracting the number of documents the term appears in from the
+    ## total number of documents in the training corpus (this can lead to positive and negative scores)
+    def get_probabilistic_idf(self, token):
+        if token in self.idf:
+            return self.idf[token]
+        else:
+            current_idf = log(self.sent_count-self.n_containing(token) / self.n_containing(token))
+            self.idf[token] = current_idf
+            return current_idf
+
     # Must be used after all Documents, Sentences, and Tokens have been filled.
     def compute_tf_idf(self):
-        for doc in self.document_list:
+        #for sentence in doc.sentence_list + [self.title, self.narrative,  doc.headline]:
+        for sentence in self.all_sentences():
+            if sentence:
 
-            for sentence in doc.sentence_list + [self.title, self.narrative, doc.headline ]:
-                if sentence:
+                for token in sentence.token_list:
+                    token_value=token.token_value
 
-                    for token in sentence.token_list:
-                        token_value=token.token_value
+                    try:
+                        idf=eval('self.get_' + Topic.idf_type +'(token_value)')
+                    except:
+                        idf=self.get_smooth_idf(token_value)
 
-#                        sentence.tf_idf[token]=token.tf*self.get_idf(token_value)
-                        sentence.tf_idf[token_value]=token.tf*self.get_idf(token_value)
+                    sentence.tf_idf[token_value] = token.tf * idf
 
 class Document:
-    def __init__(self, parent_topic:Topic , doc_id:str=None, headline:str=None,date:str=None, category:str=None):
+    def __init__(self, parent_topic:Topic=None , doc_id:str=None, headline:str=None,date:str=None, category:str=None, document_text:str=None):
+        self.sent_count = 0
         self.parent_topic=parent_topic
         self.doc_id=doc_id
-        self.headline=headline ##### *** Not all topics have this attribute ***
         self.date=date
         self.category=category ##### *** Not all topics have this attribute ***
-        self.sent_count=0
-        self.sentence_list=[]
-        self.parent_topic.doc_count+=1 ### Increments parent count When initialized
+        self.sentence_list = self.create_sentence_list(document_text)
+        ############### Creates and adds headline Sentence Objects To Topic
+        self.headline = Sentence.create_sentence(self,headline) ##### *** Not all topics have this attribute ***
+
+        if parent_topic:
+            self.parent_topic.doc_count+=1 ### Increments parent count When initialized
 
     def __repr__(self):
         return str(self.sentence_list)
@@ -106,21 +156,36 @@ class Document:
     def __lt__(self, other):
         return (self.date < other.date)
 
+    # Takes Document object and the text from doc file. The block of text is separated into sentences as sentence objects and also tokenized using NLTK.
+    def create_sentence_list(self, doc_text)->list:
+        sentence_list=[]
+        for doc_sentence in sent_tokenize(doc_text):
+            current_sentence=Sentence(self, doc_sentence)  #Creates sentence object
+            current_sentence.index=len(sentence_list)
+            sentence_list.append(current_sentence)
+        return sentence_list
+
+#All sentences are part of a document of either Topic or Document type
 class Sentence:
+    ps = PorterStemmer()
+    stemming=False
+    lower=False
+
     def __init__(self,parent_doc:Document or Topic, original_sentence:str):
-        self.index=-1
         self.score=0
         self.parent_doc=parent_doc
         self.original_sentence=original_sentence
+        self.nouns=set()
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
-        self.token_list=[]   ##### *** List of non-duplicate Tokens as Objects ***
+        self.tf_values = {}
+        self.token_list=self.create_token_list(self.original_sentence)  ##### *** List of non-duplicate Tokens as Objects ***
         self.tf_idf={}
 
         # Increments parent count when initialized. If parent_doc is Document, then Topic sent_count is also incremented
         self.parent_doc.sent_count+=1
-        if type(self.parent_doc) is Document:
+        if type(self.parent_doc) is Document and self.parent_doc.parent_topic:
             self.parent_doc.parent_topic.sent_count+=1
-            self.index = len(self.parent_doc.sentence_list)
+            self.index = -1
 
     def __repr__(self):
         return self.original_sentence
@@ -133,66 +198,176 @@ class Sentence:
     def __contains__(self, param):
         return any(token.token_value == param for token in self.token_list)
 
+    ### Wrapper initializer that includes validation
+    @classmethod
+    def create_sentence(cls, self:Topic or Document, original_sentence: str):
+        if original_sentence:
+            sentence = Sentence(self, original_sentence)
+        else:
+            sentence = None
+        return sentence
+
+    def get_term_frequency(self,tokenized_sentence,token):
+        return tokenized_sentence.count(token) / len(tokenized_sentence)
+    def get_raw_count(self,tokenized_sentence,token):
+        return tokenized_sentence.count(token)
+    def get_log_normalization(self,tokenized_sentence,token):
+        return log(1+ tokenized_sentence.count(token) )
+
+    ##### I think this would be good to be implemented but reuqires extra planning
+    #def get_augmented_frequency(self,tokenized_sentence,token):
+    #    return .5 + (.5 *tokenized_sentence.count(token)/ argmax word count in sentence    )
+
+
+
+    # Tokenizes a sentences and populates the sentence object with a token object list
+    def create_token_list(self, original_sentence: str)->list:
+
+        '''
+         # Edits the original sentence to remove article formatting
+         # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
+         original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
+         token_list = []
+
+         tokenized_sent = word_tokenize(original_sentence)
+         pos_tags = pos_tag(tokenized_sent)
+
+         if Sentence.lower:
+             pos_tags=[(token.lower(),pos) for token,pos in pos_tags]
+
+         if Sentence.stemming:  ##### THe stemmer also lowercases
+             pos_tags=[(Sentence.ps.stem(token),pos) for token,pos in pos_tags]
+
+         tokens=[token for token,pos in pos_tags]
+         ##### WITH POS TAGS, Duplicate words allowed as long as the POS is different
+         for token, pos in set(pos_tags):
+             ''''######### Removes stop words #########'''''
+             if token not in stop_words:
+
+                 if token not in self.tf_values:
+                     try:
+                         tf = eval('self.get_' + Topic.tf_type + '(tokens,token)')
+                     except:
+                         tf = self.get_term_frequency(tokens, token)
+                     self.tf_values.update({token:tf})
+                 else:
+                     tf=self.tf_values[token]
+
+                 token_list.append(Token(self, token, tf, pos))
+
+
+         return token_list
+         '''
+
+        # Edits the original sentence to remove article formatting
+        # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
+        original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
+        token_list = []
+
+        '''LOTS OF TOKEN LOOPING WITHIN SENT REQUIRED BECAUSE OF POS TAGGING'''
+        #Tokenize sentence
+        tokenized_sent = word_tokenize(original_sentence)
+
+        #Must tokenize sentence before pos tagging
+        #Captures only Nouns and adds to self.nouns set
+        [self.nouns.add(token) for token,pos in pos_tag(tokenized_sent) if 'NN' in pos]
+
+        #Lowercasing before pos tagging affects tags, so must do after as list
+        if Sentence.lower:
+            tokenized_sent = [token.lower() for token in tokenized_sent]
+
+        #Can only stem one word at a time, can't stem whole sentence
+        if Sentence.stemming:  ##### THe stemmer also lowercases
+            tokenized_sent = [Sentence.ps.stem(token) for token in tokenized_sent]
+
+        for token in set(tokenized_sent):
+            ''''######### Removes stop words #########'''''
+            if token not in stop_words:
+
+                try:
+                    tf = eval('self.get_' + Topic.tf_type + '(tokenized_sent,token)')
+                except:
+                    tf = self.get_term_frequency(tokenized_sent, token)
+
+                self.tf_values.update({token: tf})
+
+                token_list.append(Token(self, token, tf))
+
+        return token_list
+
+
 class Token:
-    def __init__(self,parent_sentence:Sentence, token_value:str, tf):
+    def __init__(self,parent_sentence:Sentence, token_value:str, tf): #, pos):
         self.tf=tf
         self.parent_sentence=parent_sentence
         self.token_value=token_value
+        #self.pos=pos
+        #if 'NN' in self.pos:
+        #    self.parent_sentence.nouns.add(self.token_value)
     def __repr__(self):
         return self.token_value
-
 
 ###############################
 ### Tag Variables used to avoid hardcoding later in the document or in case of tag changes
 
 title_tag='title'
 narrative_tag='narrative'
-category_tag='category'
+topic_category_tag='category'
 docsetA_tag='docseta'
 id_tag='id'
 doc_tag='doc'
 topic_tag='topic'
 parser_tag='lxml'
+categories_file_tag='/categories.txt'
+headline_tag='headline'
 
 ###############################
 
-# Takes a list of file paths, collects all data and stores into a list of class object 'Topic' data structures
-def get_data(file_paths:list)->list:
+# Takes a file path, collects all data and stores into a list of class object 'Topic' data structures
+def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smooth_idf',tf_type="term_frequency")->list:
+    configure_class_objects(stemming,lower,idf_type,tf_type)
 
-    task_data = ""
-    for path in file_paths:
-        with open(path) as file:
-            task_data += file.read() + "\n"
+    with open(file_path) as f1:
+        task_data = f1.read()
 
-    return get_topics_list(task_data)
+        soup = BeautifulSoup(task_data, parser_tag)
+        raw_topics = soup.findAll(topic_tag)
 
-#Tokenizes a sentences and populates the sentence object with a token object list
-def populate_token_list(current_sent:Sentence, original_sentence:str):
+    return get_topics_list(raw_topics, get_categories(file_path))
 
-    #Edits the original sentence to remove article formatting
-    # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
-    original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
-    current_sent.original_sentence=original_sentence
+# unary_idf smooth_idf standard_idf probabilistic_idf
+def configure_class_objects(stemming:bool,lower:bool, idf_type:str, tf_type:str):
 
-    tokenized_sent = word_tokenize(original_sentence)
-    tokenized_sent_len = len(tokenized_sent)
-    for token in set(tokenized_sent):
-        ''''######### Removes stop words #########'''''
-        if token not in stop_words:
-            current_sent.token_list.append(Token(current_sent, token, tokenized_sent.count(token) / tokenized_sent_len))
+    if stemming:
+        Sentence.stemming = stemming
+    if lower:
+        Sentence.lower=lower
+    if idf_type:
+        Topic.idf_type=idf_type
+    if tf_type:
+        Topic.tf_type=tf_type
 
-#Takes Document object and the text from doc file. The block of text is separated into sentences as sentence objects and also tokenized using NLTK.
-def populate_sentence_list(current_doc, doc_text):
+def get_categories(file_path:str):
 
-    doc_sentences = sent_tokenize(doc_text)
+    try:
+        with open(file_path.rsplit("/",maxsplit=1)[0] + categories_file_tag) as f2:
+            categories=f2.read().replace(":","").replace("(","").replace(")","").replace("/"," ")
+            #Splits on two empty lines in a row
+            bag_of_words={}
+            for category in categories.split("\n\n\n")[1:]:
+                lines=category.strip().split("\n")
+                index, words = lines[0].split(" ", maxsplit= 1)
+                index=index.rstrip(".")
 
-    for doc_sentence in doc_sentences:
+                bag_of_words.update({index : words.strip().split(" ")})
+                for line in lines[1:]:
+                    bag_of_words[index]+=line.split()[1:]
 
-        current_sentence=Sentence(current_doc, doc_sentence)
+            return bag_of_words
 
-        populate_token_list(current_sentence, doc_sentence)
+    except FileNotFoundError:
+        return None
 
-        current_doc.sentence_list.append( current_sentence )  ############## Creates sentence object
 
 #Takes a Topic class object, an xml or html document set element, and a document retriever object
 # Itterates all document Id's in html/xml element and uses the doc retriever to get the raw document from database
@@ -206,27 +381,17 @@ def populate_document_list(current_topic, docsetA, doc_ret:document_retriever.Do
         raw_doc = doc_ret.retrieve_doc(doc_id)
         headline, category, dateline, doc_text = get_doc_attributes(raw_doc, doc_ret.headline_tag, doc_ret.category_tag, doc_ret.dateline_tag, doc_ret.text_tag)
 
-        current_doc = Document(parent_topic=current_topic, doc_id=doc_id, date=doc_ret.date, category=category)  ########## Creates document object
-
-
-        ##### Creates and adds headline Sentence Objecct To document
-        if headline:
-            headline_sentence = Sentence(current_doc, headline)
-            populate_token_list(headline_sentence, headline)
-            current_doc.headline = headline_sentence
-        ##########################################################
-
-
-        populate_sentence_list(current_doc, doc_text)
+        current_doc = Document(parent_topic=current_topic, doc_id=doc_id, date=doc_ret.date,headline=headline, category=category, document_text=doc_text)  ########## Creates document object
 
         current_topic.document_list.append(current_doc)
 
 # Takes the raw topic xml/html and a set of title, narrative, and docset TAGS according to the format of file
 # extracts the respective text including document IDs for Aqcuaint(2) database
-def get_topic_attributes(raw_topic, title_tag:str , narrative_tag:str, category_tag:str, docsetA_tag:str):
+def get_topic_attributes(raw_topic, title_tag:str , narrative_tag:str, topic_category_tag:str, docsetA_tag:str):
 
     narrative=None
     title=None
+    topic_category=None
 
     topic_id = raw_topic.attrs[id_tag]
 
@@ -240,17 +405,18 @@ def get_topic_attributes(raw_topic, title_tag:str , narrative_tag:str, category_
         if narrative_element is not None:
             narrative = narrative_element.text
 
-    if category_tag:
-        category_element=raw_topic.attrs.get(category_tag)
+    if topic_category_tag:
+        category_element=raw_topic.attrs.get(topic_category_tag)
         if category_element is not None:
-            print(category_element)
+            topic_category=category_element
+
 
 
     docsetA = raw_topic.find(docsetA_tag)
 
     docsetA_id = docsetA.attrs[id_tag]
 
-    return topic_id, title, narrative, docsetA_id, docsetA
+    return topic_id, title, narrative, docsetA_id, docsetA, topic_category
 
 # Requires raw document and the specific tags used according to current HTML or XML.
 # Extracts the headline category dateline and text if available in raw document.
@@ -285,33 +451,14 @@ def get_doc_attributes(raw_doc, headline_tag:str="", category_tag:str="", dateli
 #Parses Raw data XML file argument and extracts the topic elements.
 # Creates Topic elements and fills withtopic attributes and Document objects
 # Returns these topic objects as a list.
-def get_topics_list(task_data:str)->list:
+def get_topics_list(raw_topics, topic_categories)->list:
     topics=[]
     doc_ret = document_retriever.Document_Retriever()
 
-    soup = BeautifulSoup(task_data, parser_tag)
-    raw_topics = soup.findAll(topic_tag)
-
     for raw_topic in raw_topics:
-        topic_id, title, narrative, docsetA_id, docsetA = get_topic_attributes(raw_topic, title_tag, narrative_tag,category_tag, docsetA_tag)
+        topic_id, title, narrative, docsetA_id, docsetA, topic_category = get_topic_attributes(raw_topic, title_tag, narrative_tag,topic_category_tag, docsetA_tag)
 
-        current_topic= Topic(topic_id=topic_id,docsetA_id=docsetA_id) ########### Creates topic object
-
-
-        ########## Creates and adds narrative Sentence Object To Topic
-        title_sentence=Sentence(current_topic,title)
-        populate_token_list(title_sentence, title)
-        current_topic.title=title_sentence
-        ##########################################################
-
-
-        ############# Creates and adds narrative Sentence Object To Topic
-        if narrative:
-            narrative_sentence = Sentence(current_topic, narrative)
-            populate_token_list(narrative_sentence, narrative)
-            current_topic.narrative=narrative_sentence
-        ##########################################################
-
+        current_topic= Topic(topic_id = topic_id,docsetA_id = docsetA_id, title = title, narrative = narrative, category=" ".join(topic_categories[topic_category])) ########### Creates topic object
 
         populate_document_list(current_topic, docsetA, doc_ret)
 
@@ -325,47 +472,51 @@ def get_topics_list(task_data:str)->list:
 
 
 '''''''''''''''''''''''''''''''''''''''''''''
-Method used to create dummy data structures for testing purposes
+Method used to create dummy data structures for testing purposes : Requires formatted Topic file
 '''''''''''''''''''''''''''''''''''''''''''''
-def build_pseudo_topic(pseudo_document_file_path):
+def build_pseudo_topic(pseudo_document_file_path, stemming:bool=False, lower:bool=False, idf_type:str=None, tf_type:str=None):
+
+    configure_class_objects(stemming,lower, idf_type, tf_type)
 
     #```doc_id = 1a \n date = 20110506 \n ### \n Sentence 1 would be here. \n Sentence 2 would be here, etc.```
     # (where ### is a metadata separator and everything below that would be a sentence on its own line)
-    with open(pseudo_document_file_path) as file:
+    with open(pseudo_document_file_path) as f1:
         #Parses whole document by empty line
-        topic_header, pseudo_docs=file.read().split("\n\n", maxsplit=1)
+        topic_meta_data, pseudo_docs=f1.read().split("\n\n", maxsplit=1)
+
+
         #Puts topic meta-data into dictionary
-        topic_header = dict([data.split("=") for data in topic_header.split("\n")])
+        topic_meta_data = dict((x.strip(),y.strip()) for x,y in [data.split("=") for data in topic_meta_data.split("\n")])
 
         #Loads empty topic object with topic metadata from dictionary
-        current_topic = Topic()
-        for key, value in topic_header.items():
-            try:
-                key=key.strip()
-                if key == "title" or key == "narrative" :
-                    sent = Sentence(parent_doc=current_topic, original_sentence=value)
-                    populate_token_list(sent,value)
-                    setattr(current_topic,str(key),sent)
-                else:
-                    setattr(current_topic, str(key),value)
-            except Exception as e:
-                print(e)
+        current_topic=Topic
+        try:
+            current_topic=Topic(**topic_meta_data)
+        except Exception as e:
+            print(e)
 
         #Separates documents then document metadata from sentences and loads them into a dictionary
         #Calls populate sentences to finish filling remaining data structures
         for doc in pseudo_docs.split("\n\n"):
-            meta_data, sentences=doc.split("###")
-            meta_data=dict([data.split("=") for data in meta_data.replace(" ","").split()])
+            doc_meta_data, sentences=doc.split("###")
+            doc_meta_data=dict([data.split("=") for data in doc_meta_data.replace(" ","").split()])
 
-            current_doc=Document(parent_topic=current_topic)
-            for key,value in meta_data.items():
-                try:
-                    setattr(current_doc, str(key), value)
-                except Exception as e:
-                    print(e)
 
-            populate_sentence_list(current_doc=current_doc,doc_text=sentences.strip().replace("\n"," "))
-            current_topic.document_list.append(current_doc)
+            try:
+                current_doc = Document(parent_topic=current_topic, document_text=sentences.strip().replace("\n", " "),**doc_meta_data)
+                current_topic.document_list.append(current_doc)
+            except Exception as e:
+                print(e)
+
 
         current_topic.compute_tf_idf()
+
+
         return current_topic
+
+
+'''''''''''''''''''''''''''''''''''''''''''''
+Method used to create dummy data structures for the Gold Standard data
+'''''''''''''''''''''''''''''''''''''''''''''
+def get_gold_standard_docs(file_path:str)->list:
+    return [Document(parent_topic=None,document_text=open(file_path+"/"+file_name).read()) for file_name in os.listdir(file_path)]
