@@ -30,9 +30,9 @@ def _cosine_similarity(sentence_1, sentence_2):
         return denominator  
 
 
-def _build_sim_matrix(sent_list, threshold):
+def _build_sim_matrix(sent_list, intersent_threshold, intersent_formula, mle_lambda, topic_tf_smoothed_dict = None):
     """
-    Builds and returns a 2D numpy matrix of inter-sentential cosine similarity.
+    Builds and returns a 2D numpy matrix of inter-sentential similarity.
     """
     num_sent = len(sent_list)
 
@@ -46,12 +46,16 @@ def _build_sim_matrix(sent_list, threshold):
         # since bottom half is identical
         for j in range(i, num_sent):
 
-            # Get the cosine similarity for different sentences
+            # Get the similarity for different sentences
             if i != j:
-                sim = _cosine_similarity(sent_list[i], sent_list[j])
+                if intersent_formula == "norm" and topic_tf_smoothed_dict is not None:
+                    sim = _calc_norm_gen_prob(sent_list[i], sent_list[j], mle_lambda, topic_tf_smoothed_dict)
+                else:
+                    # Default is to use cosine similarity
+                    sim = _cosine_similarity(sent_list[i], sent_list[j])
 
 		# Only include similarities above the threshold
-                if sim >= threshold:
+                if sim >= intersent_threshold:
                     sim_matrix[i][j] = sim
                     sim_matrix[j][i] = sim
             else:
@@ -67,7 +71,7 @@ def _build_sim_matrix(sent_list, threshold):
     return sim_matrix
 
 
-def _build_bias_vec(sent_list, topic_sent, include_narrative = False, bias_formula = "cos"):
+def _build_bias_vec(sent_list, topic_sent, include_narrative, bias_formula, mle_lambda, topic_tf_smoothed_dict):
     """
     Builds and returns a 1D numpy vector of the similarity between each sentence
     and the topic title.
@@ -89,6 +93,9 @@ def _build_bias_vec(sent_list, topic_sent, include_narrative = False, bias_formu
         # Use the specified bias formula to calculate bias weight
         if bias_formula == "rel":
             bias_vec[i] = _calc_relevance(sent_list[i], topic_sent, topic_idf_dict)
+        elif bias_formula == "gen" and topic_tf_smoothed_dict is not None:
+            # TODO: Ensure the order is correct for topic_sent and sent_list[i]
+            bias_vec[i] = _calc_gen_prob(topic_sent, sent_list[i], mle_lambda, topic_tf_smoothed_dict)
         else:
             # Default is cosine similarity
             bias_vec[i] = _cosine_similarity(sent_list[i], topic_sent)
@@ -115,6 +122,38 @@ def _calc_relevance(sent, topic_sent, topic_idf_dict):
         rel_sum += math.log(sent.tf_values.get(i, 0.0) + 1) * math.log(topic_sent.tf_values.get(i) + 1) * topic_idf_dict.get(i) 
 
     return rel_sum
+
+
+def _calc_smoothed_mle(word, sent, mle_lambda, topic_tf_smoothed_dict):
+    """
+    Calculates the smoothed MLE (Maximum Likelihood Estimate) for a word
+    in a sentence, smoothing with the tf values from the entire topic cluster.
+    Returns the smoothed MLE value.
+    """
+    # TODO: return (1 - mle_lambda)* sent.tf_smoothed[word] + lambda * topic_tf_smoothed_dict[word]
+    pass
+
+
+def _calc_gen_prob(sent_1, sent_2, mle_lambda, topic_tf_smoothed_dict):
+    """
+    Calculates the generative probability of sent_1 given sent_2.
+    Returns ????
+    """
+    # TODO: p_gen(sent_1|sent_2) = product of _calc_smoothed_mle(word|sent_v) ** tf_w,u
+    # gen_prod = 1
+    # for word in sent_1.tf:
+    #     gen_prod *= ( _calc_smoothed_mle(word, sent_2, mle_lambda, topic_tf_smoothed_dict) ** sent_1.tf[word] )
+    pass
+
+
+def _calc_norm_gen_prob(sent_1, sent_2, mle_lambda, topic_tf_smoothed_dict):
+    """
+    Calculates the length-normalized generative probability of sent_1 given sent_2.
+    Returns ????
+    """
+    # TODO: p_norm(u|V) = _calc_gen_prob(sent_1, sent_2, mle_lambda, topic_tf_smoothed_dict) ** 1/|u|
+
+    pass
 
 
 def _build_markov_matrix(sim_matrix, bias_vec, d):
@@ -157,7 +196,7 @@ def _power_method(markov_matrix, epsilon):
     return prob_vec
 
 
-def _select_sentences(sorted_sentences, summary_threshold = 0.5):
+def _select_sentences(sorted_sentences, summary_threshold):
     """ 
     Takes a list of sentences sorted by LexRank value (descending)
     and selects the sentences to add to the summary greedily based on LexRank value
@@ -206,7 +245,7 @@ def _select_sentences(sorted_sentences, summary_threshold = 0.5):
     return added_sents
 
 
-def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_threshold = 0.5, epsilon = 0.1, include_narrative = False, min_sent_len = 8, bias_formula = "cos"):
+def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, include_narrative = False, min_sent_len = 8, bias_formula = "cos", intersent_formula = "cos"):
     """
     For each topic, creates summaries of <= 100 words (full sentences only) 
     using a Biased LexRank similarity graph algorithm
@@ -218,6 +257,7 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
         intersent_threshold: minimum amount of similarity required to include in Similarity Matrix
         summary_threshold: maximum amount of similarity between sentences in summary
         epsilon: minimum amount of difference between probabilities between rounds of power method
+        mle_lambda: amount to prioritize topic MLE over sentence MLE 
         include_narrative: True if the narrative (in addition to title) should be in the bias
         min_sent_len: minimum number of words in a sentence to be used in the summary
         bias_formula: which formula to use for sentence-topic similarity weighting - cos (cosine similarity), rel (relevance), or gen (generation probability)
@@ -228,6 +268,7 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
         in the topic.summary fields of each topic.
 
     """
+    # TODO: check and see if I need to pass in term_frequency (likely do for gen/norm options)
 
     # A dictionary of topics with a list of the (sentence, date) 
     # which are chosen for the summary (<= 100 words)
@@ -245,11 +286,18 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
         # Don't include sentences that are less than 5 words
         total_sentences = [sent for doc in topic.document_list for sent in doc.sentence_list if sent.sent_len >= min_sent_len]
 
+        # TODO: If this is a member variable, do regardless & remove Nones from downstream
+        # If intersent_formula is "norm", build the topic_tf_smoothed_dict
+        if intersent_formula == "norm" or bias_formula == "gen":
+            topic_tf_smoothed_dict = None # TODO: once implemented, grab topic.tf_smoothed
+        else:
+            topic_tf_smoothed_dict = None
+
         # Build the inter-sentential cosine similarity matrix
-        sim_matrix = _build_sim_matrix(total_sentences, intersent_threshold)
+        sim_matrix = _build_sim_matrix(total_sentences, intersent_threshold, mle_lambda, topic_tf_smoothed_dict)
 
         # Build the topic-sentence bias vec
-        bias_vec = _build_bias_vec(total_sentences, topic_title, include_narrative, bias_formula)
+        bias_vec = _build_bias_vec(total_sentences, topic_title, include_narrative, bias_formula, mle_lambda, topic_tf_smoothed_dict)
 
         # Build a Markov Matrix using the inter-sentential and bias similarities
         markov_matrix = _build_markov_matrix(sim_matrix, bias_vec, d)
@@ -270,5 +318,3 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
 
     # Return the list of topics now that the summary has been added to each
     return topics_list
-
-
