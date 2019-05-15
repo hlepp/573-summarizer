@@ -14,6 +14,8 @@ import document_retriever
 from math import log
 import os  # os module imported here to open multiple files at once
 import itertools ### Used to find groups of consecutive similar items in list for NN
+from itertools import groupby
+from operator import itemgetter
 
 
 
@@ -41,6 +43,8 @@ class Topic:
         self.sent_count = 0
         self.topic_id=topic_id
         self.docsetA_id=docsetA_id
+        self.raw_counts = {}  ##### Used for counts across all sentences
+        self.tf_norm_values= {}
         ############### Creates and adds title and narrative and category Sentence Objects To Topic
         self.title = Sentence.create_sentence(self, title)
         self.narrative = Sentence.create_sentence(self, narrative) ##### *** Not all topics have this attribute ***
@@ -49,6 +53,7 @@ class Topic:
         self.document_list=[]
         self.summary = []
         self.idf={}
+
 
     #Returns list of all sentences in Topic, including Title sentence, narrative sentences, and headlines
     def all_sentences(self)->list:
@@ -61,6 +66,9 @@ class Topic:
         # checks the narrative in the topic
         if self.narrative:
             total_sentences.append(self.narrative)
+
+        if self.category:
+            total_sentences.append(self.category)
 
             # checks all headlines if available in every document in the topic
         total_sentences += [document.headline for document in self.document_list if document.headline]
@@ -122,6 +130,9 @@ class Topic:
 
     # Must be used after all Documents, Sentences, and Tokens have been filled.
     def compute_tf_idf(self):
+
+        cluster_count=sum(self.raw_counts.values())
+
         #for sentence in doc.sentence_list + [self.title, self.narrative,  doc.headline]:
         for sentence in self.all_sentences():
             if sentence:
@@ -129,17 +140,27 @@ class Topic:
                 for token in sentence.token_list:
                     token_value=token.token_value
 
+                    if token_value not in self.tf_norm_values.keys():
+                        raw_token_count=self.raw_counts.get(token_value)
+                        try:
+                            self.tf_norm_values.update({token_value: eval(
+                                'Sentence.get_' + Topic.tf_type + '(cluster_count=cluster_count,raw_token_count=raw_token_count)')})
+                        except:
+                            self.tf_norm_values.update({token_value: Sentence.get_term_frequency(cluster_count=cluster_count, raw_token_count=raw_token_count)})
+
+
                     try:
                         idf=eval('self.get_' + Topic.idf_type +'(token_value)')
                     except:
                         idf=self.get_smooth_idf(token_value)
 
-                    sentence.tf_idf[token_value] = token.tf * idf
+                    sentence.tf_idf[token_value] = token.raw_count * idf
+                    sentence.tf_idf_norm[token_value] = sentence.tf_norm_values[token_value] * idf
 
 class Document:
     def __init__(self, parent_topic:Topic=None , doc_id:str=None, headline:str=None,date:str=None, category:str=None, document_text:str=None):
+        self.parent_topic = parent_topic
         self.sent_count = 0
-        self.parent_topic=parent_topic
         self.doc_id=doc_id
         self.date=date
         self.category=category ##### *** Not all topics have this attribute ***
@@ -174,12 +195,14 @@ class Sentence:
     def __init__(self,parent_doc:Document or Topic, original_sentence:str):
         self.score=0
         self.parent_doc=parent_doc
-        self.original_sentence=original_sentence
+        self.original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
         self.nouns=set()
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
-        self.tf_values = {}
+        self.raw_counts = {}
+        self.tf_norm_values={}
         self.token_list=self.create_token_list(self.original_sentence)  ##### *** List of non-duplicate Tokens as Objects ***
         self.tf_idf={}
+        self.tf_idf_norm={}
 
         # Increments parent count when initialized. If parent_doc is Document, then Topic sent_count is also incremented
         self.parent_doc.sent_count+=1
@@ -207,12 +230,15 @@ class Sentence:
             sentence = None
         return sentence
 
-    def get_term_frequency(self,tokenized_sentence,token):
-        return tokenized_sentence.count(token) / len(tokenized_sentence)
-    def get_raw_count(self,tokenized_sentence,token):
+    @classmethod
+    def get_term_frequency(cls,cluster_count,raw_token_count):
+        return raw_token_count / cluster_count
+    @classmethod
+    def get_raw_count(cls,tokenized_sentence,token):
         return tokenized_sentence.count(token)
-    def get_log_normalization(self,tokenized_sentence,token):
-        return log(1+ tokenized_sentence.count(token) )
+    @classmethod
+    def get_log_normalization(cls,cluster_count, raw_token_count):
+        return log(1+ raw_token_count )
 
     ##### I think this would be good to be implemented but reuqires extra planning
     #def get_augmented_frequency(self,tokenized_sentence,token):
@@ -223,45 +249,8 @@ class Sentence:
     # Tokenizes a sentences and populates the sentence object with a token object list
     def create_token_list(self, original_sentence: str)->list:
 
-        '''
-         # Edits the original sentence to remove article formatting
-         # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
-         original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
-         token_list = []
-
-         tokenized_sent = word_tokenize(original_sentence)
-         pos_tags = pos_tag(tokenized_sent)
-
-         if Sentence.lower:
-             pos_tags=[(token.lower(),pos) for token,pos in pos_tags]
-
-         if Sentence.stemming:  ##### THe stemmer also lowercases
-             pos_tags=[(Sentence.ps.stem(token),pos) for token,pos in pos_tags]
-
-         tokens=[token for token,pos in pos_tags]
-         ##### WITH POS TAGS, Duplicate words allowed as long as the POS is different
-         for token, pos in set(pos_tags):
-             ''''######### Removes stop words #########'''''
-             if token not in stop_words:
-
-                 if token not in self.tf_values:
-                     try:
-                         tf = eval('self.get_' + Topic.tf_type + '(tokens,token)')
-                     except:
-                         tf = self.get_term_frequency(tokens, token)
-                     self.tf_values.update({token:tf})
-                 else:
-                     tf=self.tf_values[token]
-
-                 token_list.append(Token(self, token, tf, pos))
-
-
-         return token_list
-         '''
-
         # Edits the original sentence to remove article formatting
         # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
-        original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
         token_list = []
 
         '''LOTS OF TOKEN LOOPING WITHIN SENT REQUIRED BECAUSE OF POS TAGGING'''
@@ -284,26 +273,39 @@ class Sentence:
             ''''######### Removes stop words #########'''''
             if token not in stop_words:
 
+                raw_token_count = Sentence.get_raw_count(tokenized_sent, token)
+
+                #Adds raw count to sentence
+                self.raw_counts.update({token:raw_token_count})
+
                 try:
-                    tf = eval('self.get_' + Topic.tf_type + '(tokenized_sent,token)')
+                    tf_norm = eval('Sentence.get_' + Topic.tf_type + '(cluster_count=len(tokenized_sent),raw_token_count=raw_token_count)')
                 except:
-                    tf = self.get_term_frequency(tokenized_sent, token)
+                    tf_norm = Sentence.get_term_frequency(len(tokenized_sent), raw_token_count)
 
-                self.tf_values.update({token: tf})
+                #Adds normalalized tf to sentence
+                self.tf_norm_values.update({token: tf_norm})
 
-                token_list.append(Token(self, token, tf))
+                ##### Adds tokens raw counts to Parent Topic
+                if type(self.parent_doc)==Topic:
+                    current_topic=self.parent_doc
+                else:
+                    current_topic=self.parent_doc.parent_topic
+
+                current_topic.raw_counts.update({token: current_topic.raw_counts.get(token,0)+raw_token_count})
+                ###############################################
+
+                token_list.append(Token(self, token, raw_token_count ,tf_norm))
 
         return token_list
 
 
 class Token:
-    def __init__(self,parent_sentence:Sentence, token_value:str, tf): #, pos):
-        self.tf=tf
+    def __init__(self,parent_sentence:Sentence, token_value:str, raw_count, tf_norm):
+        self.raw_count=raw_count
+        self.tf_norm=tf_norm
         self.parent_sentence=parent_sentence
         self.token_value=token_value
-        #self.pos=pos
-        #if 'NN' in self.pos:
-        #    self.parent_sentence.nouns.add(self.token_value)
     def __repr__(self):
         return self.token_value
 
@@ -325,6 +327,17 @@ headline_tag='headline'
 
 # Takes a file path, collects all data and stores into a list of class object 'Topic' data structures
 def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smooth_idf',tf_type="term_frequency")->list:
+    """Extracts database documents and creates data structure objects to hold them. Returns a list of Topic objects
+
+    Args:
+        file_path:str file path on patas that leads to directory that holds training or testing data
+        stemming:bool True enables each sentence to be stored with a stem representation in objects and tokens, False does nothing
+        lower:bool True enables each sentence to be stored in lower case, False does nothing.
+        idf_type:str String input dictates idf representation in objects. Options are: 'smooth_idf', 'probabilistic_idf' , 'standard_idf' , and 'unary_idf'
+        tf_type:str String input dictates tf representation in objects. Options are: 'term_frequency', 'log_normalization'
+
+    """
+
     configure_class_objects(stemming,lower,idf_type,tf_type)
 
     with open(file_path) as f1:
@@ -458,7 +471,10 @@ def get_topics_list(raw_topics, topic_categories)->list:
     for raw_topic in raw_topics:
         topic_id, title, narrative, docsetA_id, docsetA, topic_category = get_topic_attributes(raw_topic, title_tag, narrative_tag,topic_category_tag, docsetA_tag)
 
-        current_topic= Topic(topic_id = topic_id,docsetA_id = docsetA_id, title = title, narrative = narrative, category=" ".join(topic_categories[topic_category])) ########### Creates topic object
+        if topic_category:
+            topic_category = " ".join(topic_categories[topic_category])
+
+        current_topic= Topic(topic_id = topic_id,docsetA_id = docsetA_id, title = title, narrative = narrative, category=topic_category) ########### Creates topic object
 
         populate_document_list(current_topic, docsetA, doc_ret)
 
@@ -489,10 +505,11 @@ def build_pseudo_topic(pseudo_document_file_path, stemming:bool=False, lower:boo
         topic_meta_data = dict((x.strip(),y.strip()) for x,y in [data.split("=") for data in topic_meta_data.split("\n")])
 
         #Loads empty topic object with topic metadata from dictionary
-        current_topic=Topic
+        current_topic=None
         try:
             current_topic=Topic(**topic_meta_data)
         except Exception as e:
+
             print(e)
 
         #Separates documents then document metadata from sentences and loads them into a dictionary
