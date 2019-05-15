@@ -326,7 +326,7 @@ headline_tag='headline'
 ###############################
 
 # Takes a file path, collects all data and stores into a list of class object 'Topic' data structures
-def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smooth_idf',tf_type="term_frequency")->list:
+def get_data(file_path:str, stemming:bool=True, lower:bool=False, idf_type='smooth_idf',tf_type="term_frequency")->list:
     """Extracts database documents and creates data structure objects to hold them. Returns a list of Topic objects
 
     Args:
@@ -471,7 +471,10 @@ def get_topics_list(raw_topics, topic_categories)->list:
     for raw_topic in raw_topics:
         topic_id, title, narrative, docsetA_id, docsetA, topic_category = get_topic_attributes(raw_topic, title_tag, narrative_tag,topic_category_tag, docsetA_tag)
 
-        current_topic= Topic(topic_id = topic_id,docsetA_id = docsetA_id, title = title, narrative = narrative, category=" ".join(topic_categories[topic_category])) ########### Creates topic object
+        if topic_category:
+            topic_category = " ".join(topic_categories[topic_category])
+
+        current_topic= Topic(topic_id = topic_id,docsetA_id = docsetA_id, title = title, narrative = narrative, category=topic_category) ########### Creates topic object
 
         populate_document_list(current_topic, docsetA, doc_ret)
 
