@@ -326,7 +326,7 @@ headline_tag='headline'
 ###############################
 
 # Takes a file path, collects all data and stores into a list of class object 'Topic' data structures
-def get_data(file_path:str, stemming:bool=True, lower:bool=False, idf_type='smooth_idf',tf_type="term_frequency")->list:
+def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smooth_idf',tf_type="term_frequency")->list:
     """Extracts database documents and creates data structure objects to hold them. Returns a list of Topic objects
 
     Args:
