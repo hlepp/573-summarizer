@@ -155,6 +155,7 @@ class Topic:
                         idf=self.get_smooth_idf(token_value)
 
                     sentence.tf_idf[token_value] = token.raw_count * idf
+                    sentence.tf_idf_norm[token_value] = sentence.tf_norm_values[token_value] * idf
 
 class Document:
     def __init__(self, parent_topic:Topic=None , doc_id:str=None, headline:str=None,date:str=None, category:str=None, document_text:str=None):
@@ -201,6 +202,7 @@ class Sentence:
         self.tf_norm_values={}
         self.token_list=self.create_token_list(self.original_sentence)  ##### *** List of non-duplicate Tokens as Objects ***
         self.tf_idf={}
+        self.tf_idf_norm={}
 
         # Increments parent count when initialized. If parent_doc is Document, then Topic sent_count is also incremented
         self.parent_doc.sent_count+=1
