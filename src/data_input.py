@@ -536,4 +536,4 @@ def build_pseudo_topic(pseudo_document_file_path, stemming:bool=False, lower:boo
 Method used to create dummy data structures for the Gold Standard data
 '''''''''''''''''''''''''''''''''''''''''''''
 def get_gold_standard_docs(file_path:str)->list:
-    return [Document(parent_topic=None,document_text=open(file_path+"/"+file_name).read()) for file_name in os.listdir(file_path)]
+    return [Document(parent_topic=Topic(),document_text=open(file_path+"/"+file_name).read()) for file_name in os.listdir(file_path)]
