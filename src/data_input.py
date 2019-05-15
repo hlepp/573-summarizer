@@ -195,7 +195,7 @@ class Sentence:
     def __init__(self,parent_doc:Document or Topic, original_sentence:str):
         self.score=0
         self.parent_doc=parent_doc
-        self.original_sentence=original_sentence
+        self.original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
         self.nouns=set()
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
         self.raw_counts = {}
@@ -251,7 +251,6 @@ class Sentence:
 
         # Edits the original sentence to remove article formatting
         # This location was chosen so that all sentences that are tokenized (i.e., Title sentence) could also be effected by this
-        original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
         token_list = []
 
         '''LOTS OF TOKEN LOOPING WITHIN SENT REQUIRED BECAUSE OF POS TAGGING'''
