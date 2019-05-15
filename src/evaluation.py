@@ -13,7 +13,8 @@ from subprocess import Popen, PIPE
 
 def change_xml(output_folder, data_type):
     default_xml = open('src/ROUGE/revised_config.xml', 'r')
-    new_xml = open('src/ROUGE/revised_config_new.xml', 'w+')
+    config_file = "src/ROUGE/revised_config" + output_folder + ".xml"
+    new_xml = open(config_file, "w+")    
     if not os.path.exists('outputs/' + output_folder):
         os.mkdir(output_folder)
     for line in default_xml:
@@ -26,19 +27,19 @@ def change_xml(output_folder, data_type):
             if data_type == 'dev':
                 new_xml.write('/dropbox/18-19/573/Data/models/devtest/\n')
             elif data_type == 'train':
-                new_xml.write('/dropbox/18-19/573/Data/models/training/2009/\n')
+                new_xml.write('/dropbox/18-19/573/Data/models/training/2009\n')
             elif data_type == 'eval':
                 new_xml.write('/dropbox/18-19/573/Data/models/evaltest/\n')
             else:
                 raise ValueError('First argument must be train, dev, or eval')
         else:
             new_xml.write(line)
+    return config_file
 
 
 def eval_summary(output_folder, data_type):
-    change_xml(output_folder, data_type)
+    CONFIG_FILE_WITH_PATH = change_xml(output_folder, data_type)
     ROUGE_DATA_DIR = '/dropbox/18-19/573/code/ROUGE/data'
-    CONFIG_FILE_WITH_PATH = 'src/ROUGE/revised_config_new.xml'
     COMMAND = 'src/ROUGE/ROUGE-1.5.5.pl -e ' + ROUGE_DATA_DIR \
         + ' -a -n 2 -x -m -c 95 -r 1000 -f A -p 0.5 -t 0 -l 100 -s -d ' \
         + CONFIG_FILE_WITH_PATH
