@@ -7,9 +7,9 @@ __author__ = 'Shannon Ladymon, Haley Lepp, Ben Longwill, Amina Venton'
 __email__ = \
     'sladymon@uw.edu, hlepp@uw.edu, longwill@uw.edu, aventon@uw.edu'
 
-from data_input import get_data
+from data_input import get_data, get_gold_standard_docs
 from content_selection import select_content
-from info_ordering import order_info
+from info_ordering import order_info_chron, order_info_entity, get_training_vectors
 from content_realization import realize_content
 from evaluation import eval_summary
 from sys import argv
@@ -92,12 +92,37 @@ if __name__ == '__main__':
 
     topics_with_summaries = select_content(topics)
 
+    #TODO: where should training for entity grids sentence ordering go
+    # Training for Information Ordering
+    # Read in gold summary document data
+    # Return a list of document objects
+    
+    gold_summ_path = "/dropbox/18-19/573/Data/models/training/2009"
+    gold_summ_docs = get_gold_standard_docs(gold_summ_path)
+    #TODO: add path to condor file for argparse
+    
+    # Generates entity grids and feature representations 
+    # for all document permutations
+    # Returns the list of feature representations in 
+    # 2D numpy arrays for each document
+    all_docs_vectors = get_training_vectors(gold_summ_docs)
+
+    #TODO: Modify stub for ordering with entity grid model
     # Information Ordering
+    # Entity-Based Approach
+    # Orders sentences by best ranked from entity grid model for each topic
+    # Returns the list of topics with optimally ordered
+    # sentences in each topic.summary variable
+
+    # topics_with_summaries_in_order = order_info_entity(topics_with_summaries)
+
+    # Information Ordering
+    # Chronological Order Approach
     # Orders sentences by date and sentence position for each topic
     # Returns the list of topics with chronologically ordered
     # sentences in each topic.summary variable
 
-    topics_with_summaries_in_order = order_info(topics_with_summaries)
+    topics_with_summaries_in_order = order_info_chron(topics_with_summaries)
 
     # Content Realization
     # Process sentences to make well-formed
