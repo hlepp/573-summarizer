@@ -4,11 +4,12 @@
 """Content Selector for multi-document text summarization that ranks and chooses the sentences to use in the summary."""
 
 __author__ = "Shannon Ladymon, Haley Lepp, Amina Venton"
-__email__ = "sladymon@uw.edu, hlepp@uw.edu, aventon@uw.edu"
+__email__ = "sladymon@uw.edu, hlepp@uw.ediu, aventon@uw.edu"
 
 from data_input import Topic, Document, Sentence, Token
 import math
 import numpy as np
+from operator import itemgetter
 
 
 def _cosine_similarity(sentence_1, sentence_2):
@@ -30,26 +31,7 @@ def _cosine_similarity(sentence_1, sentence_2):
         return denominator  
 
 
-def _cosine_similarity_norm(sentence_1, sentence_2):
-    """
-    Calculates and returns cosine similarity using normalized tf-idf of two sentence objects
-    """
-    numerator = 0
-    denominator_1 = 0
-    denominator_2 = 0
-    for i in sentence_1.tf_idf_norm.keys():
-        numerator += sentence_1.tf_idf_norm.get(i) * sentence_2.tf_idf_norm.get(i, 0.0)
-        denominator_1 += sentence_1.tf_idf_norm.get(i) ** 2
-    for i in sentence_2.tf_idf_norm.values():
-        denominator_2 += i * i
-    denominator = math.sqrt(denominator_1 * denominator_2)
-    if denominator != 0:
-        return numerator / denominator
-    else:
-        return denominator  
-
-
-def _build_sim_matrix(sent_list, intersent_threshold, intersent_formula, mle_lambda, topic):
+def _build_sim_matrix(sent_list, intersent_threshold, intersent_formula, mle_lambda, k, topic):
     """
     Builds and returns a 2D numpy matrix of inter-sentential similarity.
     """
@@ -61,29 +43,42 @@ def _build_sim_matrix(sent_list, intersent_threshold, intersent_formula, mle_lam
     # Fill the 2D numpy matrix with inter-sentential cosine similarity
     for i in range(num_sent):
 
+        sim_vals = []
+
         # only iterate over top half triangle of matrix
         # since bottom half is identical
         for j in range(i, num_sent):
 
-            # Get the similarity for different sentences
-            if i != j:
-                if intersent_formula == "norm":
-                    sim = _calc_norm_gen_prob(sent_list[i], sent_list[j], mle_lambda, topic)
-                elif intersent_formula == "cos_raw":
-                    sim = _cosine_similarity_norm(sent_list[i], sent_list[j])
-                else:
-                    # Default is to use cosine similarity for normalized tf "cos_norm"
+            if intersent_formula == "norm":
+                # Get similarity via normalized generative probability
+                sim = _calc_norm_gen_prob(sent_list[i], sent_list[j], mle_lambda, topic)
+
+                # Keep track of the similarity values to rank & filter later
+                sim_vals.append((i, j, sim))
+            else:
+                # Default is to use cosine similarity
+
+                # Get the similarity for different sentences
+                if i != j:
                     sim = _cosine_similarity(sent_list[i], sent_list[j])
 
-                # TODO: Check if this threshold holds for norm version?
-		# Only include similarities above the threshold
-                if sim >= intersent_threshold:
-                    sim_matrix[i][j] = sim
-                    sim_matrix[j][i] = sim
-            else:
-                # If the same sentence, sim is 1.0
-                sim_matrix[i][i] = 1.0
+		    # Only include similarities above the threshold
+                    if sim >= intersent_threshold:
+                        sim_matrix[i][j] = sim
+                        sim_matrix[j][i] = sim
 
+                else:
+                    # If the same sentence, cosine sim is 1.0
+                    sim_matrix[i][i] = 1.0
+
+        # For norm similarity, add only the top k similarities for sentence i 
+        if intersent_formula == "norm":
+            sorted_sim_vals = sorted(sim_vals, key=itemgetter(2), reverse=True)[:k]
+            print("TESTING: len of sorted_sim_vals={}".format(len(sorted_sim_vals)))
+            for i, j, sim in sorted_sim_vals:
+                print("TESTING: i={}; j={}, sim={}".format(i, j, sim))
+                sim_matrix[i][j] = sim
+                sim_matrix[j][i] = sim
 
     # Normalize by dividing by sum of each row
     row_sums = sim_matrix.sum(axis=1, keepdims=True)
@@ -112,13 +107,10 @@ def _build_bias_vec(sent_list, topic_sent, include_narrative, bias_formula, mle_
         if bias_formula == "rel":
             bias_vec[i] = _calc_relevance(sent_list[i], topic_sent, topic)
         elif bias_formula == "gen":
-            # TODO: Ensure the order is correct for topic_sent and sent_list[i]
             bias_vec[i] = _calc_gen_prob(topic_sent, sent_list[i], mle_lambda, topic)
-        elif bias_formula == "cos_raw":
-            bias_vec[i] = _cosine_similarity(sent_list[i], topic_sent)
         else:
             # Default is cosine similarity
-            bias_vec[i] = _cosine_similarity_norm(sent_list[i], topic_sent)
+            bias_vec[i] = _cosine_similarity(sent_list[i], topic_sent)
 
     # Normalize by dividing by the sum
     bias_sum = np.sum(bias_vec)
@@ -137,9 +129,9 @@ def _calc_relevance(sent, topic_sent, topic):
 
     rel_sum = 0
 
-    # Calculate the relevance based on the tf values for each word in 
-    for i in topic_sent.tf_values.keys():
-        rel_sum += math.log(sent.raw_count.get(i, 0.0) + 1) * math.log(topic_sent.raw_count.get(i) + 1) * topic.idf.get(i) 
+    # Calculate the relevance based on the tf raw count for each word in 
+    for i in topic_sent.raw_counts.keys():
+        rel_sum += math.log(sent.raw_counts.get(i, 0.0) + 1) * math.log(topic_sent.raw_counts.get(i) + 1) * topic.idf.get(i) 
 
     return rel_sum
 
@@ -150,18 +142,16 @@ def _calc_smoothed_mle(word, sent, mle_lambda, topic):
     in a sentence, smoothing with the tf values from the entire topic cluster.
     Returns the smoothed MLE value.
     """
-    # TODO: Test
-    return ((1 - mle_lambda)* sent.tf_norm_values.get(word, 0)) + (lambda * topic.tf_norm_values[word])
+    return ((1 - mle_lambda)* sent.tf_norm_values.get(word, 0)) + (mle_lambda * topic.tf_norm_values[word])
 
 
 def _calc_gen_prob(sent_1, sent_2, mle_lambda, topic):
     """
     Calculates and returns the generative probability of sent_1 given sent_2.
     """
-    # TODO: Test, and ensure correct formula
     gen_prod = 1
-    for word in sent_1.tf:
-        gen_prod *= ( _calc_smoothed_mle(word, sent_2, mle_lambda, topic) ** sent_1.tf[word] )
+    for word in sent_1.raw_counts:
+        gen_prod *= ( _calc_smoothed_mle(word, sent_2, mle_lambda, topic) ** sent_1.raw_counts[word] )
 
     return gen_prod
 
@@ -169,10 +159,9 @@ def _calc_norm_gen_prob(sent_1, sent_2, mle_lambda, topic):
     """
     Calculates and returns the length-normalized generative probability of sent_1 given sent_2.
     """
-    # TODO: Test
     sent_1_len = sum([count for count in sent_1.raw_counts.values()])
 
-    return _calc_gen_prod(sent_1, sent_2, mle_lambda, topic) ** (1.0 / sent_1_len)
+    return _calc_gen_prob(sent_1, sent_2, mle_lambda, topic) ** (1.0 / sent_1_len)
 
 
 def _build_markov_matrix(sim_matrix, bias_vec, d):
@@ -264,7 +253,7 @@ def _select_sentences(sorted_sentences, summary_threshold):
     return added_sents
 
 
-def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, include_narrative = False, min_sent_len = 8, bias_formula = "cos_norm", intersent_formula = "cos_norm"):
+def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos"):
     """
     For each topic, creates summaries of <= 100 words (full sentences only) 
     using a Biased LexRank similarity graph algorithm
@@ -277,10 +266,11 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
         summary_threshold: maximum amount of similarity between sentences in summary
         epsilon: minimum amount of difference between probabilities between rounds of power method
         mle_lambda: amount to prioritize topic MLE over sentence MLE 
-        include_narrative: True if the narrative (in addition to title) should be in the bias
+        k: maximum number of intersentential similarity nodes to connect when doing normalized generation probability
         min_sent_len: minimum number of words in a sentence to be used in the summary
-        bias_formula: which formula to use for sentence-topic similarity weighting - cos_norm (cosine similarity with normalized tf), cos_raw (cosine similarity with raw count tf), rel (relevance), or gen (generation probability)
-        intersent_formula: which formula to use for inter-sentential similarity weighting - cos_norm (cosine similarity with normalized tf), cos_raw (cosine similarity with raw count tf), or norm (normalized generation probability)
+        include_narrative: True if the narrative (in addition to title) should be in the bias
+        bias_formula: which formula to use for sentence-topic similarity weighting - cos (cosine similarity), rel (relevance), or gen (generation probability)
+        intersent_formula: which formula to use for inter-sentential similarity weighting - cos (cosine similarity) or norm (normalized generation probability)
 
     Returns:
         topic_list: the modified topic_list from the input, with a list of selected sentences
@@ -304,7 +294,7 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_thr
         total_sentences = [sent for doc in topic.document_list for sent in doc.sentence_list if sent.sent_len >= min_sent_len]
 
         # Build the inter-sentential cosine similarity matrix
-        sim_matrix = _build_sim_matrix(total_sentences, intersent_threshold, intersent_formula, mle_lambda, topic)
+        sim_matrix = _build_sim_matrix(total_sentences, intersent_threshold, intersent_formula, mle_lambda, k, topic)
 
         # Build the topic-sentence bias vec
         bias_vec = _build_bias_vec(total_sentences, topic_title, include_narrative, bias_formula, mle_lambda, topic)
