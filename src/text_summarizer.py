@@ -63,26 +63,40 @@ def write_summary_files(topics_with_final_summaries):
                 out_file.write(sentence.original_sentence + '\n')
 
 
-if __name__ == '__main__':
-    p = argparse.ArgumentParser()
-    p.add_argument('d')
-    p.add_argument('threshold')
-    p.add_argument('epsilon')
-    p.add_argument('output_folder')
-    p.add_argument('input_file')
-    args = p.parse_args()
-    d = float(args.d)
-    threshold = float(args.threshold)
-    epsilon = float(args.epsilon)
-    folder = str(args.output_folder)
-    input_path = str(args.input_file)
+def summarize_text(file_path, output_folder, stemming = False, lower = False, idf_type = 'smooth_idf', tf_type = "term_frequency", d = 0.7, intersent_threshold = 0.0, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos"):
+    """
+    Creates extractive summaries (<= 100 words) of multi-document news sets from TAC 2009/2010
+    Prints one summary file per topic and nests inside outputs/<output_folder>/
+    Runs ROUGE and prints results file inside results/<output_folder>_rouge_scores.out
 
+    Args:
+        file_path:str file path on patas that leads to directory that holds training or testing data
+        stemming:bool True enables each sentence to be stored with a stem representation in objects and tokens, False does nothing
+        lower:bool True enables each sentence to be stored in lower case, False does nothing.
+        idf_type:str String input dictates idf representation in objects. Options are: 'smooth_idf', 'probabilistic_idf' , 'standard_idf' , and 'unary_idf'
+        tf_type:str String input dictates tf representation in objects. Options are: 'term_frequency', 'log_normalization'
+        topic_list: a list of Topic objects (which include Documents and Sentences)
+        d: damping factor, amount to prioritize topic bias in Markov Matrix
+        intersent_threshold: minimum amount of similarity required to include in Similarity Matrix
+        summary_threshold: maximum amount of similarity between sentences in summary
+        epsilon: minimum amount of difference between probabilities between rounds of power method
+        mle_lambda: amount to prioritize topic MLE over sentence MLE 
+        k: maximum number of intersentential similarity nodes to connect when doing normalized generation probability
+        min_sent_len: minimum number of words in a sentence to be used in the summary
+        include_narrative: True if the narrative (in addition to title) should be in the bias
+        bias_formula: which formula to use for sentence-topic similarity weighting - cos (cosine similarity), rel (relevance), or gen (generation probability)
+        intersent_formula: which formula to use for inter-sentential similarity weighting - cos (cosine similarity) or norm (normalized generation probability)
 
+    Returns:
+        topic_list: the modified topic_list from the input, with a list of selected sentences
+        in the topic.summary fields of each topic.
 
+    """
+    
     # Read in input data
     # and return a list of Topic objects (with Documents/Sentences)
 
-    topics = get_data(input_path,stemming=False,lower=False,idf_type='smooth_idf')
+    topics = get_data(input_path,stemming,lower,idf_type, tf_type)
 
     # Content Selection
     # identifies salient sentences & ranks them
@@ -90,7 +104,7 @@ if __name__ == '__main__':
     # Returns the list of topics with each topic.summary variable
     # modified to include a list of sentences to include
 
-    topics_with_summaries = select_content(topics)
+    topics_with_summaries = select_content(topics, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula)
 
     #TODO: where should training for entity grids sentence ordering go
     # Training for Information Ordering
@@ -139,6 +153,47 @@ if __name__ == '__main__':
     # by running ROUGE-1 & ROUGE-2
 
     eval_summary(folder)
+
+
+if __name__ == '__main__':
+    # Grab arguments
+    p = argparse.ArgumentParser()
+    p.add_argument('input_file')
+    p.add_argument('output_folder')
+    p.add_argument('stemming')
+    p.add_argument('lower')
+    p.add_argument('idf_type')
+    p.add_argument('tf_type')
+    p.add_argument('d')
+    p.add_argument('intersent_threshold')
+    p.add_argument('summary_threshold')
+    p.add_argument('epsilon')
+    p.add_argument('mle_lambda')
+    p.add_argument('k')
+    p.add_argument('min_sent_len')
+    p.add_argument('include_narrative')
+    p.add_argument('bias_formula')
+    p.add_argument('intersent_formula')
+    args = p.parse_args()
+ 
+    input_path = str(args.input_file)
+    folder = str(args.output_folder)
+    stemming = str(args.stemming)
+    lower = str(args.lower)
+    idf_type = str(args.idf_type)
+    tf_type = str(args.tf_type)
+    d = float(args.d)
+    intersent_threshold = float(args.intersent_threshold)
+    summary_threshold = float(args.summary_threshold)
+    epsilon = float(args.epsilon)
+    mle_lambda = float(args.mle_lambda)
+    k = int(args.k)
+    min_sent_len = int(args.min_sent_len)
+    include_narrative = str(args.include_narrative)
+    bias_formula = str(args.bias_formula)
+    intersent_formula = str(args.intersent_formula)
+
+    summarize_text(input_path, folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula)
 
 
 			
