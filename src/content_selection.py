@@ -74,9 +74,7 @@ def _build_sim_matrix(sent_list, intersent_threshold, intersent_formula, mle_lam
         # For norm similarity, add only the top k similarities for sentence i 
         if intersent_formula == "norm":
             sorted_sim_vals = sorted(sim_vals, key=itemgetter(2), reverse=True)[:k]
-            print("TESTING: len of sorted_sim_vals={}".format(len(sorted_sim_vals)))
             for i, j, sim in sorted_sim_vals:
-                print("TESTING: i={}; j={}, sim={}".format(i, j, sim))
                 sim_matrix[i][j] = sim
                 sim_matrix[j][i] = sim
 
@@ -253,7 +251,7 @@ def _select_sentences(sorted_sentences, summary_threshold):
     return added_sents
 
 
-def select_content(topics_list, d = 0.7, intersent_threshold = 0.15, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos"):
+def select_content(topics_list, d = 0.7, intersent_threshold = 0.0, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos"):
     """
     For each topic, creates summaries of <= 100 words (full sentences only) 
     using a Biased LexRank similarity graph algorithm
