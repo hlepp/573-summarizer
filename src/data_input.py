@@ -337,7 +337,7 @@ def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smo
         tf_type:str String input dictates tf representation in objects. Options are: 'term_frequency', 'log_normalization'
 
     """
-
+    print("\n\nTESTING: in get_data, params:\nfile_path={}\nstemming={}\nlower={}\nidf_type={}\ntf_type={}".format(file_path, stemming, lower, idf_type, tf_type))
     configure_class_objects(stemming,lower,idf_type,tf_type)
 
     with open(file_path) as f1:

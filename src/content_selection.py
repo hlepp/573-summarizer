@@ -275,6 +275,7 @@ def select_content(topics_list, d = 0.7, intersent_threshold = 0.0, summary_thre
         in the topic.summary fields of each topic.
 
     """
+    print("\n\nTESTING: in select_content, params:\nd={}\nintersent_threshold={}\nsummary_threshold={}\nepsilon={}\nmle_lambda={}\nk={}\nmin_sent_len={}\ninclude_narrative={}\nbias_formula={}\nintersent_formula={}".format(d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula))
     # A dictionary of topics with a list of the (sentence, date) 
     # which are chosen for the summary (<= 100 words)
     topic_summaries = {}
