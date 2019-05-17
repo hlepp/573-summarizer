@@ -101,15 +101,15 @@ def summarize_topics_list(topics, output_folder, d = 0.7, intersent_threshold = 
     # Read in gold summary document data
     # Return a list of document objects
     
-    gold_summ_path = "/dropbox/18-19/573/Data/models/training/2009"
-    gold_summ_docs = get_gold_standard_docs(gold_summ_path)
+#    gold_summ_path = "/dropbox/18-19/573/Data/models/training/2009"
+#    gold_summ_docs = get_gold_standard_docs(gold_summ_path)
     #TODO: add path to condor file for argparse
     
     # Generates entity grids and feature representations 
     # for all document permutations
     # Returns the list of feature representations in 
     # 2D numpy arrays for each document
-    all_docs_vectors = get_training_vectors(gold_summ_docs)
+#    all_docs_vectors = get_training_vectors(gold_summ_docs)
 
     #TODO: Modify stub for ordering with entity grid model
     # Information Ordering
