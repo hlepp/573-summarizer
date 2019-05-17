@@ -3,8 +3,8 @@
 
 """Creates and runs an SVM model on sentence order vectors"""
 
-__author__ = 'Haley Lepp'
-__email__ = 'hlepp@uw.edu'
+__author__ = 'Haley Lepp, Shannon Ladymon'
+__email__ = 'hlepp@uw.edu, sladymon@uw.edu'
 
 import os
 import subprocess
@@ -97,9 +97,81 @@ def svm_test(output_folder):
     else:
         raise Exception("No model file; please train model")    
 
+
+def build_svm_model(training_vectors, output_folder):
+    """
+    Given a set of training_vectors where the first is the gold standard,
+    builds an SVM Rank model, which is written to file in src/SVM/output_folder/training/model
+    """
+
+    # Convert to a regular 2D array from numpy array if needed
+    if isinstance(training_vectors, np.ndarray):
+        training_vectors = training_vectors.tolist()
+
+    # Create the svm file for these vectors and save under src/SVM/output_folder
+    create_svm_input(training_vectors, 'train', output_folder)
+
+    # Build a model based on these training vectors
+    svm_train(output_folder)
+
+
+def get_svm_best_index(testing_vectors, output_folder):
+    """
+    Ranks the testing_vectors based on the SVM Rank model in SVM/output_folder
+    and returns the index of the highest ranked vector
+    """
+
+    # Convert to a regular 2D array from numpy array if needed
+    if isinstance(testing_vectors, np.ndarray):
+        testing_vectors = testing_vectors.tolist()
+
+
+    # Create the svm file for these vectors and save under src/SVM/output_folder
+    create_svm_input(testing_vectors, 'test', output_folder)
+
+    # Run the SVM Rank model on these testing vectors
+    svm_test(output_folder)   
+
+    # Get the best index based on the SVM Rank output
+    best_index = read_output_best_index(output_folder)
+
+    return best_index
+
+
+def read_output_best_index(output_folder):
+    """
+    Given the output_folder, where the svm output is located in
+    src/SVM/output_folder/output
+    Finds the highest rank and returns its index
+    """
+
+    # Location of file where SVM Rank results are stored
+    output_file = "src/SVM/" + output_folder + "/output"
+
+    best_rank = -1000000  # Set default to extremely negative number
+    best_index = -1
+    curr_index = 0
+
+    # Find the index with the highest ranking in the output file
+    with open(output_file) as f:
+        for line in f:
+            line = float(line)
+            if line > best_rank:
+                best_rank = line
+                best_index = curr_index
+
+            # Increment line index
+            curr_index += 1
+
+    return best_index
+
+
 # for testing
 """
 if __name__ == '__main__':
+
+    output_folder = "D3_test"
+
     train_vectors = [[0.51851852, 0.20987654, 0.2345679 , 0.03703704],  
             [0.44444444, 0.19753086, 0.30864198, 0.04938272],
             [0.51851852, 0.20987654, 0.2345679 , 0.03703704],
@@ -111,7 +183,6 @@ if __name__ == '__main__':
             [0.38271605, 0.34567901, 0.2345679 , 0.03703704],
             [0.40740741, 0.34567901, 0.20987654, 0.03703704],
             [0.30864198, 0.33333333, 0.30864198, 0.04938272]]
-    
    
     test_vectors = [[ 0.43055556, 0.31944444,  0.22222222,  0.02777778],
     [ 0.40277778,  0.29166667,  0.25,        0.05555556],
@@ -125,8 +196,7 @@ if __name__ == '__main__':
     [ 0.375,       0.27777778,  0.31944444,  0.02777778],
     [ 0.44444444,  0.25,        0.25,        0.05555556]]
 
-    create_svm_input(train_vectors, 'train', 'D3')
-    create_svm_input(test_vectors, 'test', 'D3')
-    svm_train('D3')
-    svm_test('D3')
-"""   
+    build_svm_model(train_vectors, output_folder)
+    index = get_svm_best_index(test_vectors, output_folder)
+    print("TESTING: best index = {}".format(index))
+"""
