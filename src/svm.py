@@ -27,11 +27,8 @@ def create_svm_input(feature_vector, input_type):
     # print feature vectors into file
     count = 0
     for doc in feature_vector:
-        if count == 0:
-            line = "GOLD "
-        else:
-            line = "PERM "
-	count += 1
+        count += 1
+        line = count + " qid:" + count + " " # is this right with qid?
         for i in range(0, len(doc)):
             line = line + i + ":" + doc[i] + " "
         line = line + "\n"
@@ -41,13 +38,13 @@ def create_svm_input(feature_vector, input_type):
             testing.write(line)
 
 
-def svm_train(t, g, d, r):
+def svm_train():
     """
-    Parameters: libSVM: kerneltype, gamma, degree, coef0
+    Parameters: 
     Outputs: libSVM model
     """
-    # run svm light on created file
-    COMMAND = 'svm-train -'  + t + " -" + g + " -" + d + " -" + r + ' src/SVM/training src/SVM/model'
+    # run svm rank on created file
+    COMMAND = 'svm_rank_learn -c 3 src/SVM/training src/SVM/model'
     subprocess.call(COMMAND)
 
 
@@ -56,8 +53,8 @@ def svm_test()
     Parameters:
     Outputs file with libSVM predictions
     """
-    # run svm light with existing model
-    COMMAND = 'svm-predict src/SVM/testing src/SVM/model src/SVM/output'
+    # run svm rank with existing model
+    COMMAND = 'svm_rank_classify src/SVM/testing src/SVM/model src/SVM/output'
     # check that there is a saved model
     exists = os.path.isfile('src/SVM/model')
     if exists:
