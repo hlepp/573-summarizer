@@ -8,13 +8,12 @@ __email__ = 'hlepp@uw.edu'
 
 import os
 import subprocess
-
+import numpy as np
 
 def create_train_file(training, feature_vector):
     """
     Parameters: training file, feature vector
     """
-    # print feature vectors into file
     count = 0
     gold = feature_vector[0]
     gold_line = ""
@@ -36,7 +35,6 @@ def create_test_file(testing, feature_vector):
     """
     Parameters: testing file, feature vector
     """
-    # print feature vectors into file
     count = 0
     for doc in range(0, len(feature_vector)):
         count += 1
@@ -52,10 +50,17 @@ def create_svm_input(feature_vector, input_type, output_folder):
     Parameters: Feature vector in which first line is gold; input_type of 'train' or 'test', name of output folder
     Outputs libSVM format files from feature vectors
     """
-    # create new file
-    folder = 'SVM' + output_folder
+    # Create new folder for SVM files if needed
+    svm_folder = 'src/SVM'
+    folder = 'src/SVM/' + output_folder
+    if not os.path.exists(svm_folder):
+        os.mkdir(svm_folder)
+
+    # Create new folder for current model if needed
+
     if not os.path.exists(folder):
         os.mkdir(folder)
+
     if input_type == 'train':
         training  = open(folder + '/training', 'w')
         create_train_file(training, feature_vector)
@@ -71,7 +76,7 @@ def svm_train(output_folder):
     Parameters: name of output folder 
     Outputs: SVM model
     """
-    folder = 'SVM' + output_folder
+    folder = 'src/SVM/' + output_folder
     # run svm rank on created file
     COMMAND = '/NLP_TOOLS/ml_tools/svm/svm_rank/latest/svm_rank_learn -c 20.0 ' + folder + '/training ' + folder + '/model'
     stdout = subprocess.check_output(COMMAND.split())
@@ -82,7 +87,7 @@ def svm_test(output_folder):
     Parameters: name of output folder
     Outputs file with libSVM predictions
     """
-    folder = 'SVM' + output_folder
+    folder = 'src/SVM/' + output_folder
     # run svm rank with existing model
     COMMAND = '/NLP_TOOLS/ml_tools/svm/svm_rank/latest/svm_rank_classify ' + folder + '/testing ' + folder + '/model ' + folder + '/output'
     # check that there is a saved model
@@ -95,7 +100,7 @@ def svm_test(output_folder):
 # for testing
 """
 if __name__ == '__main__':
-    vector = [[0.51851852, 0.20987654, 0.2345679 , 0.03703704],  
+    train_vectors = [[0.51851852, 0.20987654, 0.2345679 , 0.03703704],  
             [0.44444444, 0.19753086, 0.30864198, 0.04938272],
             [0.51851852, 0.20987654, 0.2345679 , 0.03703704],
             [0.43209877, 0.18518519, 0.32098765, 0.0617284 ],
@@ -106,8 +111,22 @@ if __name__ == '__main__':
             [0.38271605, 0.34567901, 0.2345679 , 0.03703704],
             [0.40740741, 0.34567901, 0.20987654, 0.03703704],
             [0.30864198, 0.33333333, 0.30864198, 0.04938272]]
-    create_svm_input(vector, 'train', 'test')
-    create_svm_input(vector, 'test', 'test')
-    svm_train('test')
-    svm_test('test')
-"""    
+    
+   
+    test_vectors = [[ 0.43055556, 0.31944444,  0.22222222,  0.02777778],
+    [ 0.40277778,  0.29166667,  0.25,        0.05555556],
+    [ 0.44444444,  0.30555556,  0.20833333,  0.04166667],
+    [ 0.40277778,  0.29166667,  0.25,        0.05555556],
+    [ 0.38888889,  0.30555556,  0.26388889,  0.04166667],
+    [ 0.375,       0.31944444,  0.27777778,  0.02777778],
+    [ 0.48611111,  0.26388889,  0.20833333,  0.04166667],
+    [ 0.43055556,  0.26388889,  0.26388889,  0.04166667],
+    [ 0.47222222,  0.27777778,  0.22222222,  0.02777778],
+    [ 0.375,       0.27777778,  0.31944444,  0.02777778],
+    [ 0.44444444,  0.25,        0.25,        0.05555556]]
+
+    create_svm_input(train_vectors, 'train', 'D3')
+    create_svm_input(test_vectors, 'test', 'D3')
+    svm_train('D3')
+    svm_test('D3')
+"""   
