@@ -185,6 +185,7 @@ def summarize_text(file_path, output_folder, stemming = False, lower = False, id
 
 
 if __name__ == '__main__':
+
     # Grab arguments
     p = argparse.ArgumentParser()
     p.add_argument('input_file')
@@ -207,8 +208,8 @@ if __name__ == '__main__':
  
     input_path = str(args.input_file)
     output_folder = str(args.output_folder)
-    stemming = str(args.stemming)
-    lower = str(args.lower)
+    stemming = bool(int(args.stemming))
+    lower = bool(int(args.lower))
     idf_type = str(args.idf_type)
     tf_type = str(args.tf_type)
     d = float(args.d)
@@ -218,11 +219,11 @@ if __name__ == '__main__':
     mle_lambda = float(args.mle_lambda)
     k = int(args.k)
     min_sent_len = int(args.min_sent_len)
-    include_narrative = str(args.include_narrative)
+    include_narrative = bool(int(args.include_narrative))
     bias_formula = str(args.bias_formula)
     intersent_formula = str(args.intersent_formula)
 
-    print("TESTING: in main for text_summarizer.py:\ninput_path={}\noutput_folder={}\nstemming={}\nlower={}\nidf_type={}\ntf_type={}\nd={}\nintersent_threshold={}\nsummary_threshold={}\nepsilon={}\nmle_lambda={}\nk={}\nmin_sent_len={}\ninclude_narrative={}\nbias_formula={}\nintersent_formula={}".format(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula))
+    # Run the text summarizer with the given parameters
     summarize_text(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula)
 
 
