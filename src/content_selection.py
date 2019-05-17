@@ -89,8 +89,13 @@ def _build_sim_matrix(sent_list, intersent_threshold, intersent_formula, mle_lam
 def _build_bias_vec(sent_list, topic_sent, include_narrative, bias_formula, mle_lambda, topic):
     """
     Builds and returns a 1D numpy vector of the similarity between each sentence
-    and the topic title.
+    and the topic title. Additionally adds the similarity of the narrative if include_narrative.
     """
+
+    # Grab the narrative, which is sometimes located in topic.category
+    narrative = topic.narrative
+    if narrative is None:
+        narrative = topic.category
 
     # Holds the similarity for each sentence with the topic descritpion
     num_sent = len(sent_list)
@@ -103,12 +108,30 @@ def _build_bias_vec(sent_list, topic_sent, include_narrative, bias_formula, mle_
 
         # Use the specified bias formula to calculate bias weight
         if bias_formula == "rel":
+
+            # Get the relevance of the topic to this sentence
             bias_vec[i] = _calc_relevance(sent_list[i], topic_sent, topic)
+
+            # Add the relevance of the narrative if needed
+            if include_narrative:
+                bias_vec[i] +=  _calc_relevance(sent_list[i], narrative, topic)
+
         elif bias_formula == "gen":
+
+            # Get the generative probability of the topic for this sentence
             bias_vec[i] = _calc_gen_prob(topic_sent, sent_list[i], mle_lambda, topic)
+
+            # Add the generative probability of the narrative if needed
+            if include_narrative:
+                bias_vec[i] +=  _calc_gen_prob(narrative, sent_list[i], mle_lambda, topic)
         else:
+
             # Default is cosine similarity
             bias_vec[i] = _cosine_similarity(sent_list[i], topic_sent)
+
+            # Add the similarity of the narrative if needed
+            if include_narrative:
+                bias_vec[i] +=  _cosine_similarity(sent_list[i], narrative)
 
     # Normalize by dividing by the sum
     bias_sum = np.sum(bias_vec)
