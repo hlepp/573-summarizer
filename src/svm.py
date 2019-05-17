@@ -10,6 +10,37 @@ import os
 import subprocess
 
 
+def create_train_file(feature_vector):
+    # print feature vectors into file
+    count = 0
+    gold = feature_vector[0]
+    gold_line = ""
+    for i in range(0, len(gold)):
+            line = line + i + ":" + gold[i] + " "
+    for doc in range(1, len(feature_vector)):
+        count += 1
+        gold_line = "1 qid:" + count + gold_line
+        line = "2 qid:" + count + " " # is this right with target?
+        for i in range(0, len(doc)):
+            line = line + i + ":" + doc[i] + " "
+        line = line + "\n"
+        training.write(gold_line)
+        training.write(line)
+
+
+def create_test_file(feature_vector):
+    # print feature vectors into file
+    count = 0
+    for doc in range(0, len(feature_vector)):
+        count += 1
+        line = count + " qid:" + count + " " # is this right with target?
+        for i in range(0, len(doc)):
+            line = line + i + ":" + doc[i] + " "
+        line = line + "\n"
+        testing.write(gold_line)
+        testing.write(line)
+
+
 def create_svm_input(feature_vector, input_type):
     """
     Parameters: Feature vector in which first line is gold; input_type of 'train' or 'test'
@@ -20,22 +51,12 @@ def create_svm_input(feature_vector, input_type):
         os.mkdir('src/SVM')
     if input_type == 'train'
         training  = open('src/SVM/training', 'w')
+        create_train_file(feature_vector)
     elif input_type == 'test'
         testing = open('src/SVM/testing', 'w')
+        create_test_file(feature_vector)
     else:
        raise Exception("Input type must be train or test") 
-    # print feature vectors into file
-    count = 0
-    for doc in feature_vector:
-        count += 1
-        line = count + " qid:" + count + " " # is this right with qid?
-        for i in range(0, len(doc)):
-            line = line + i + ":" + doc[i] + " "
-        line = line + "\n"
-        if input_type == 'train':
-            training.write(line)
-        else: 
-            testing.write(line)
 
 
 def svm_train():
