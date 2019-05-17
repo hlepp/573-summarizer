@@ -16,6 +16,8 @@ def create_svm_input(feature_vector, input_type):
     Outputs libSVM format files from feature vectors
     """
     # create new file
+    if not os.path.exists('src/SVM'):
+        os.mkdir('src/SVM')
     if input_type == 'train'
         training  = open('src/SVM/training', 'w')
     elif input_type == 'test'
