@@ -167,7 +167,7 @@ def read_output_best_index(output_folder):
 
 
 # for testing
-"""
+
 if __name__ == '__main__':
 
     output_folder = "D3_test"
@@ -199,4 +199,3 @@ if __name__ == '__main__':
     build_svm_model(train_vectors, output_folder)
     index = get_svm_best_index(test_vectors, output_folder)
     print("TESTING: best index = {}".format(index))
-"""

@@ -1,0 +1,19 @@
+src/SVMD3_test/training: No such file or directory
+Traceback (most recent call last):
+  File "src/text_summarizer.py", line 224, in <module>
+    summarize_text(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
+  File "src/text_summarizer.py", line 177, in summarize_text
+    summarize_topics_list(topics, output_folder, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
+  File "src/text_summarizer.py", line 110, in summarize_topics_list
+    topics_with_summaries_in_order = order_info_entity(topics_with_summaries, num_permutations, output_folder)
+  File "/home2/aventon/ling573/573-summarizer/src/info_ordering.py", line 329, in order_info_entity
+    build_entity_model(output_folder, num_permutations)
+  File "/home2/aventon/ling573/573-summarizer/src/info_ordering.py", line 310, in build_entity_model
+    build_svm_model(all_train_vectors, output_folder)
+  File "/home2/aventon/ling573/573-summarizer/src/svm.py", line 115, in build_svm_model
+    svm_train(output_folder)
+  File "/home2/aventon/ling573/573-summarizer/src/svm.py", line 82, in svm_train
+    stdout = subprocess.check_output(COMMAND.split())
+  File "/opt/python-3.4.1/lib/python3.4/subprocess.py", line 620, in check_output
+    raise CalledProcessError(retcode, process.args, output=output)
+subprocess.CalledProcessError: Command '['/NLP_TOOLS/ml_tools/svm/svm_rank/latest/svm_rank_learn', '-c', '20.0', 'src/SVMD3_test/training', 'src/SVMD3_test/model']' returned non-zero exit status 1
