@@ -10,9 +10,10 @@ __email__ = 'sladymon@uw.edu'
 from text_summarizer import summarize_text, summarize_topics_list
 from data_input import get_data
 
+
 def read_results(output_folder):
     """
-    TODO
+    Reads in the rouge score results and prints the R-1 and R-2 values
     """
     results_file = 'results/' + output_folder + '_rouge_scores.out'
 
@@ -50,7 +51,8 @@ if __name__ == '__main__':
     # 2009 defaults
     mle_lambda_default = 0.6
     k_default = 20
-
+    info_order_type = "chron"
+    num_permutations_default = 11
 
     ###### Options for each parameter to test ######
 
@@ -74,6 +76,9 @@ if __name__ == '__main__':
     mle_lambda_opts =  [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
     k_opts = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
 
+    # Test only for enitity
+    info_order_type_opts = ["chron", "entity"]
+    num_permutations_opts = [5, 10, 15, 20, 25, 30]
 
     ###### TUNED VALUES ######
 
@@ -96,6 +101,9 @@ if __name__ == '__main__':
     # TUNED CONFIG_2009 PARAMETER VALUES
     mle_lambda_tuned = 0.6
     k_tuned = 9
+
+    # TUNED INFO ORDERING PARAMTER VALUES
+    num_permutations_tuned_dict = {"form_D2": 5, "form_2005": 5, "form_2009": 20}
 
     ###### Get the Data #####
 
@@ -120,13 +128,19 @@ if __name__ == '__main__':
         epsilon_tuned = epsilon_tuned_dict[form]
         min_sent_len_tuned = min_sent_len_tuned_dict[form]
         intersent_threshold_tuned = intersent_threshold_tuned_dict[form]
+        num_permutations_tuned = num_permutations_tuned_dict[form]
+
+        # NOTE: To run tuning, choose the option list to try out, 
+        # and replace the variable with the new val
+        # in the output_folder and in the summarize_topics_list call
+        # Currently, this is set up to test values for info_order_type
 
         # Run all values to test
-        for k_val in k_opts:
-            
-            output_folder = "D3_tune_" + form + "_k_" + str(k_val)
+        for info_order_val in info_order_type_opts:
 
-            summarize_topics_list(topics, output_folder, d_tuned, intersent_threshold_tuned, summary_threshold_tuned, epsilon_tuned, mle_lambda_tuned, k_tuned, min_sent_len_tuned, include_narrative_tuned, bias_formula, intersent_formula)
+            output_folder = "D3_tune_" + form + "_info_order_" + str(info_order_val)
+
+            summarize_topics_list(topics, output_folder, d_tuned, intersent_threshold_tuned, summary_threshold_tuned, epsilon_tuned, mle_lambda_tuned, k_tuned, min_sent_len_tuned, include_narrative_tuned, bias_formula, intersent_formula, info_order_val, num_permutations_tuned)
 
             read_results(output_folder)
 

@@ -62,7 +62,7 @@ def write_summary_files(topics_with_final_summaries, output_folder):
                 out_file.write(sentence.original_sentence + '\n')
 
 
-def summarize_topics_list(topics, output_folder, d = 0.7, intersent_threshold = 0.0, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos"):
+def summarize_topics_list(topics, output_folder, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
     """
     Creates extractive summaries (<= 100 words) of multi-document news sets for a list of Topics
     Prints one summary file per topic and nests inside outputs/<output_folder>/
@@ -81,6 +81,8 @@ def summarize_topics_list(topics, output_folder, d = 0.7, intersent_threshold = 
         include_narrative: True if the narrative (in addition to title) should be in the bias
         bias_formula: which formula to use for sentence-topic similarity weighting - cos (cosine similarity), rel (relevance), or gen (generation probability)
         intersent_formula: which formula to use for inter-sentential similarity weighting - cos (cosine similarity) or norm (normalized generation probability)
+        info_order_type: entity or chron
+        num_permutations: int for how many SVM permutations
 
     Returns:
         topic_list: the modified topic_list from the input, with a list of selected sentences
@@ -96,37 +98,26 @@ def summarize_topics_list(topics, output_folder, d = 0.7, intersent_threshold = 
 
     topics_with_summaries = select_content(topics, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula)
 
-    #TODO: where should training for entity grids sentence ordering go
-    # Training for Information Ordering
-    # Read in gold summary document data
-    # Return a list of document objects
-    
-#    gold_summ_path = "/dropbox/18-19/573/Data/models/training/2009"
-#    gold_summ_docs = get_gold_standard_docs(gold_summ_path)
-    #TODO: add path to condor file for argparse
-    
-    # Generates entity grids and feature representations 
-    # for all document permutations
-    # Returns the list of feature representations in 
-    # 2D numpy arrays for each document
-#    all_docs_vectors = get_training_vectors(gold_summ_docs)
-
-    #TODO: Modify stub for ordering with entity grid model
     # Information Ordering
-    # Entity-Based Approach
-    # Orders sentences by best ranked from entity grid model for each topic
-    # Returns the list of topics with optimally ordered
-    # sentences in each topic.summary variable
+    
+    if info_order_type == "entity":
+        
+        # Entity-Based Approach
+        # Orders sentences by best ranked from entity grid model for each topic
+        # Returns the list of topics with optimally ordered
+        # sentences in each topic.summary variable
 
-    # topics_with_summaries_in_order = order_info_entity(topics_with_summaries)
+        topics_with_summaries_in_order = order_info_entity(topics_with_summaries, num_permutations, output_folder)
+    else:
 
-    # Information Ordering
-    # Chronological Order Approach
-    # Orders sentences by date and sentence position for each topic
-    # Returns the list of topics with chronologically ordered
-    # sentences in each topic.summary variable
+        # Chronological Order Approach
+        # Orders sentences by date and sentence position for each topic
+        # Returns the list of topics with chronologically ordered
+        # sentences in each topic.summary variable
 
-    topics_with_summaries_in_order = order_info_chron(topics_with_summaries)
+        topics_with_summaries_in_order = order_info_chron(topics_with_summaries)
+
+
 
     # Content Realization
     # Process sentences to make well-formed
@@ -146,7 +137,7 @@ def summarize_topics_list(topics, output_folder, d = 0.7, intersent_threshold = 
 
 
 
-def summarize_text(file_path, output_folder, stemming = False, lower = False, idf_type = 'smooth_idf', tf_type = "term_frequency", d = 0.7, intersent_threshold = 0.0, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos"):
+def summarize_text(file_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
     """
     Creates extractive summaries (<= 100 words) of multi-document news sets from TAC 2009/2010
     Prints one summary file per topic and nests inside outputs/<output_folder>/
@@ -169,6 +160,8 @@ def summarize_text(file_path, output_folder, stemming = False, lower = False, id
         include_narrative: True if the narrative (in addition to title) should be in the bias
         bias_formula: which formula to use for sentence-topic similarity weighting - cos (cosine similarity), rel (relevance), or gen (generation probability)
         intersent_formula: which formula to use for inter-sentential similarity weighting - cos (cosine similarity) or norm (normalized generation probability)
+        info_order_type: entity or chron
+        num_permutations: int for how many SVM permutations
 
     Returns:
         topic_list: the modified topic_list from the input, with a list of selected sentences
@@ -181,7 +174,7 @@ def summarize_text(file_path, output_folder, stemming = False, lower = False, id
 
     topics = get_data(input_path,stemming,lower,idf_type, tf_type)
 
-    summarize_topics_list(topics, output_folder, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula)
+    summarize_topics_list(topics, output_folder, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
 
 
 if __name__ == '__main__':
@@ -204,6 +197,8 @@ if __name__ == '__main__':
     p.add_argument('include_narrative')
     p.add_argument('bias_formula')
     p.add_argument('intersent_formula')
+    p.add_argument('info_order_type')
+    p.add_argument('num_permutations')
     args = p.parse_args()
  
     input_path = str(args.input_file)
@@ -222,9 +217,8 @@ if __name__ == '__main__':
     include_narrative = bool(int(args.include_narrative))
     bias_formula = str(args.bias_formula)
     intersent_formula = str(args.intersent_formula)
+    info_order_type = str(args.info_order_type)
+    num_permutations = int(args.num_permutations)
 
     # Run the text summarizer with the given parameters
-    summarize_text(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula)
-
-
-			
+    summarize_text(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
