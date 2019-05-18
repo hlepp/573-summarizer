@@ -281,8 +281,6 @@ def get_testing_vectors(topics_with_summaries, num_permutations):
     return all_test_vectors, test_vectors_sentence_indices, topic_objects_of_test_vectors
 
 
-
-
 def build_entity_model(output_folder, num_permutations):
     """
     This function trains the entity model with gold standard summaries
@@ -308,8 +306,6 @@ def build_entity_model(output_folder, num_permutations):
     # given all the training vectors and output folder
     # to store the model files
     build_svm_model(all_train_vectors, output_folder)
-
-
 
 
 def order_info_entity(topics_with_summaries, num_permutations, output_folder):
@@ -365,7 +361,6 @@ def order_info_entity(topics_with_summaries, num_permutations, output_folder):
 
     # Return list of Topics with ordered sentences in the Topic summary
     return topics_with_summaries
-
 
 
 def order_info_chron(topics_with_summaries):
