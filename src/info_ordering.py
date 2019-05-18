@@ -66,7 +66,6 @@ def get_entity_grids(sentence_list, nouns_list, num_permutations):
     sentence_index_permutations = [list(doc_perm_tuple) for doc_perm_tuple in
                                 itertools.islice(itertools.permutations(original_sentence_positions), num_permutations)]
 
-
     # Build the entity grid permutations using the original sentence indices and first entity grid
     entity_grid_permutations = []
 
@@ -152,9 +151,12 @@ def get_doc_data(gold_summ_docs):
 
         # List to hold (sent_position, sent_noun_set) tuples
         doc_list = []
-
+        
+        # Get sentence index and set of nouns for each sentence object
+        sent_index = 0
         for sent_obj in summary_doc.sentence_list:
-            doc_list.append((summary_doc.sentence_list.index(sent_obj), sent_obj.nouns))
+            doc_list.append((sent_index, sent_obj.nouns))
+            sent_index += 1
 
         # Add the list of sentence tuples to the dictionary
         doc_dict[summary_doc] = doc_list
@@ -300,7 +302,6 @@ def build_entity_model(output_folder, num_permutations):
     # 2D numpy arrays for each document
 
     all_train_vectors = get_training_vectors(gold_summ_docs, num_permutations)
-
 
     # Builds the model to learn the ranking function
     # given all the training vectors and output folder

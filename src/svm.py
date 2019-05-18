@@ -22,8 +22,8 @@ def create_train_file(training, feature_vector_array):
             gold_line = gold_line + str(i + 1) + ":" + str(gold[i]) + " "
         for doc in range(1, len(feature_vector)):
             count += 1
-            gold_line_1 = "1 qid:" + str(count) + " " + gold_line
-            line = "2 qid:" + str(count) + " " # is this right with target?
+            gold_line_1 = "2 qid:" + str(count) + " " + gold_line
+            line = "1 qid:" + str(count) + " "
             for i in range(0, len(feature_vector[doc])):
                 line = line + str(i + 1) + ":" + str(feature_vector[doc][i]) + " "
             line = line + "\n"
