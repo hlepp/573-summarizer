@@ -175,7 +175,10 @@ def get_training_vectors(gold_summ_docs):
     all_training_vectors
 
 
-def order_info_entity(topics_with_summaries):
+def build_entity_model(output_folder):
+    pass
+
+def order_info_entity(topics_with_summaries, num_permutations, output_folder):
     """
     Entity-based ordering approach
     This function takes in a list of Topic objects with ranked summaries
