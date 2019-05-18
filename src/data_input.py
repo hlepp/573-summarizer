@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+#!/opt/python-3.6/bin/python3/
 # -*- coding: utf-8 -*-
 
 __author__ = "Benny Longwill"
@@ -17,7 +18,7 @@ import itertools ### Used to find groups of consecutive similar items in list fo
 from itertools import groupby
 from operator import itemgetter
 
-
+import blingfire
 
 # Load your usual SpaCy model (one of SpaCy English models)
 #import spacy
@@ -28,7 +29,6 @@ from operator import itemgetter
 #neuralcoref.add_to_pipe(nlp, max_dist=100)
 #from nltk.stem import WordNetLemmatizer
 #from blingfire import text_to_words, text_to_sentences
-
 
 stop_words = set(stopwords.words('english'))
 
@@ -154,7 +154,7 @@ class Topic:
                     except:
                         idf=self.get_smooth_idf(token_value)
 
-                    sentence.tf_idf[token_value] = token.raw_count * idf
+                    sentence.tf_idf[token_value] = token.raw_count * self.get_unary_idf()
                     sentence.tf_idf_norm[token_value] = sentence.tf_norm_values[token_value] * idf
 
 class Document:
@@ -180,6 +180,8 @@ class Document:
     # Takes Document object and the text from doc file. The block of text is separated into sentences as sentence objects and also tokenized using NLTK.
     def create_sentence_list(self, doc_text)->list:
         sentence_list=[]
+
+       # sents= text_to_sentences(doc_text).split("\n")
         for doc_sentence in sent_tokenize(doc_text):
             current_sentence=Sentence(self, doc_sentence)  #Creates sentence object
             current_sentence.index=len(sentence_list)
@@ -337,6 +339,7 @@ def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smo
         tf_type:str String input dictates tf representation in objects. Options are: 'term_frequency', 'log_normalization'
 
     """
+
     configure_class_objects(stemming,lower,idf_type,tf_type)
 
     with open(file_path) as f1:
