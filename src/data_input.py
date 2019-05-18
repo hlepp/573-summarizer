@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-#!/opt/python-3.6/bin/python3/
 # -*- coding: utf-8 -*-
 
 __author__ = "Benny Longwill"
 __email__ = "longwill@uw.edu"
 
-from nltk import word_tokenize, sent_tokenize, pos_tag, download, PorterStemmer, MWETokenizer
+from nltk import word_tokenize, sent_tokenize, pos_tag, download, PorterStemmer
 #nltk.download('averaged_perceptron_tagger')
 from nltk.corpus import stopwords
 
@@ -14,21 +13,6 @@ from bs4 import BeautifulSoup
 import document_retriever
 from math import log
 import os  # os module imported here to open multiple files at once
-import itertools ### Used to find groups of consecutive similar items in list for NN
-from itertools import groupby
-from operator import itemgetter
-
-import blingfire
-
-# Load your usual SpaCy model (one of SpaCy English models)
-#import spacy
-
-#nlp = spacy.load("en")
-
-#import neuralcoref
-#neuralcoref.add_to_pipe(nlp, max_dist=100)
-#from nltk.stem import WordNetLemmatizer
-#from blingfire import text_to_words, text_to_sentences
 
 stop_words = set(stopwords.words('english'))
 
@@ -181,7 +165,6 @@ class Document:
     def create_sentence_list(self, doc_text)->list:
         sentence_list=[]
 
-       # sents= text_to_sentences(doc_text).split("\n")
         for doc_sentence in sent_tokenize(doc_text):
             current_sentence=Sentence(self, doc_sentence)  #Creates sentence object
             current_sentence.index=len(sentence_list)
