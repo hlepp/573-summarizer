@@ -327,34 +327,32 @@ def order_info_entity(topics_with_summaries, num_permutations, output_folder):
     # Get test vectors for model
     all_test_vectors, test_vectors_sentence_indices, topic_objects_of_test_vectors = get_testing_vectors(topics_with_summaries, num_permutations)
 
+    # Iterate through every topic object and each test vector 
+    # and get the most optimal ordering for each
 
-    # Iterate through every topic object
-    for topic in topic_objects_of_test_vectors:
+    for i in range(len(topic_objects_of_test_vectors)):
+        topic = topic_objects_of_test_vectors[i]
 
-        # Iterate through each test vector and get the most optimal ordering for each
-        # call get_svm_best_index for each
-        for i in range(len(all_test_vectors)):
-            test_vector = all_test_vectors[i]
+        test_vector = all_test_vectors[i]
 
-            # Gets the best ranking index in the original test vector
-            # for each summary given the test vectors and output folder
-            best_index = get_svm_best_index(test_vector, output_folder)
+        # Gets the best ranking index in the original test vector
+        # for each summary given the test vectors and output folder
+        best_index = get_svm_best_index(test_vector, output_folder)
 
-            # Get the sentence indices of the best order
-            sentence_indices_of_best_order = test_vectors_sentence_indices[i][best_index]
+        # Get the sentence indices of the best order
+        sentence_indices_of_best_order = test_vectors_sentence_indices[i][best_index]
 
-            # New Sentence objects list for each Topic object summary
-            new_summary = []
+        # New Sentence objects list for each Topic object summary
+        new_summary = []
 
-            # Get current list of sentence objects summary
-            current_summary = topic[i].summary
+        # Get current list of sentence objects summary
+        current_summary = topic.summary
 
-            # Rearrange ordering of summary based on the best order
-            for index in sentence_indices_of_best_order:
-                new_summary.append(current_summary[index])
+        # Rearrange ordering of summary based on the best order
+        for index in sentence_indices_of_best_order:
+            new_summary.append(current_summary[index])
 
-            topic.summary = new_summary
-
+        topic.summary = new_summary
 
     # Rename list with Topic objects and summaries
     topics_with_summaries = topic_objects_of_test_vectors
@@ -381,9 +379,7 @@ def order_info_chron(topics_with_summaries):
 
         # Create list of tuples of Sentence objects with their date and position
         # [(sentence_object, sentence_date, sentence_position)]
-        sentence_tuples = [(sentence_object, sentence_object.parent_doc.date, sentence_object.index) for sentence_object
-                           in sentences]
-
+        sentence_tuples = [(sentence_object, sentence_object.parent_doc.date, sentence_object.index) for sentence_object in sentences]
         # Sort Sentence objects first by date and then by position in the doc
         sentence_tuples.sort(key=itemgetter(1, 2))
 
