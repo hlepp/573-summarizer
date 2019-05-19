@@ -62,7 +62,7 @@ def write_summary_files(topics_with_final_summaries, output_folder):
                 out_file.write(sentence.original_sentence + '\n')
 
 
-def summarize_topics_list(topics, output_folder, d = 0.7, intersent_threshold = 0.0, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos", info_order_type = "chron", num_permutations = 11):
+def summarize_topics_list(topics, output_folder, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
     """
     Creates extractive summaries (<= 100 words) of multi-document news sets for a list of Topics
     Prints one summary file per topic and nests inside outputs/<output_folder>/
@@ -137,7 +137,7 @@ def summarize_topics_list(topics, output_folder, d = 0.7, intersent_threshold = 
 
 
 
-def summarize_text(file_path, output_folder, stemming = False, lower = False, idf_type = 'smooth_idf', tf_type = "term_frequency", d = 0.7, intersent_threshold = 0.0, summary_threshold = 0.5, epsilon = 0.1, mle_lambda = 0.6, k = 20, min_sent_len = 5, include_narrative = False, bias_formula = "cos", intersent_formula = "cos", info_order_type = "chron", num_permutations = 11):
+def summarize_text(file_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
     """
     Creates extractive summaries (<= 100 words) of multi-document news sets from TAC 2009/2010
     Prints one summary file per topic and nests inside outputs/<output_folder>/
@@ -221,7 +221,4 @@ if __name__ == '__main__':
     num_permutations = int(args.num_permutations)
 
     # Run the text summarizer with the given parameters
-    summarize_text(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
-
-
-			
+    summarize_text(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
