@@ -62,7 +62,7 @@ def write_summary_files(topics_with_final_summaries, output_folder):
                 out_file.write(sentence.original_sentence + '\n')
 
 
-def summarize_topics_list(topics, output_folder, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
+def summarize_topics_list(topics, output_folder, test_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
     """
     Creates extractive summaries (<= 100 words) of multi-document news sets for a list of Topics
     Prints one summary file per topic and nests inside outputs/<output_folder>/
@@ -71,6 +71,7 @@ def summarize_topics_list(topics, output_folder, d, intersent_threshold, summary
     Args:
         topics: a list of Topic objects (which include Documents and Sentences)
         output_folder: name of folder to write summaries to
+        test_type: either 'dev' for devtest data, or 'eval' for evaltest data
         d: damping factor, amount to prioritize topic bias in Markov Matrix
         intersent_threshold: minimum amount of similarity required to include in Similarity Matrix
         summary_threshold: maximum amount of similarity between sentences in summary
@@ -134,10 +135,12 @@ def summarize_topics_list(topics, output_folder, d, intersent_threshold, summary
     # by running ROUGE-1 & ROUGE-2
 
     eval_summary(output_folder)
+    # TODO: Change to below version once evaluation accepts test_type
+#    eval_summary(output_folder, test_type)
 
 
 
-def summarize_text(file_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
+def summarize_text(file_path, output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
     """
     Creates extractive summaries (<= 100 words) of multi-document news sets from TAC 2009/2010
     Prints one summary file per topic and nests inside outputs/<output_folder>/
@@ -146,6 +149,7 @@ def summarize_text(file_path, output_folder, stemming, lower, idf_type, tf_type,
     Args:
         file_path:str file path on patas that leads to directory that holds training or testing data
         output_folder: name of folder to write summaries to
+        test_type: either 'dev' for devtest data, or 'eval' for evaltest data
         stemming:bool True enables each sentence to be stored with a stem representation in objects and tokens, False does nothing
         lower:bool True enables each sentence to be stored in lower case, False does nothing.
         idf_type:str String input dictates idf representation in objects. Options are: 'smooth_idf', 'probabilistic_idf' , 'standard_idf' , and 'unary_idf'
@@ -172,17 +176,19 @@ def summarize_text(file_path, output_folder, stemming, lower, idf_type, tf_type,
     # Read in input data
     # and return a list of Topic objects (with Documents/Sentences)
 
-    topics = get_data(input_path,stemming,lower,idf_type, tf_type)
+    topics = get_data(file_path, stemming, lower, idf_type, tf_type)
 
-    summarize_topics_list(topics, output_folder, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
+    summarize_topics_list(topics, output_folder, test_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
 
 
 if __name__ == '__main__':
 
     # Grab arguments
     p = argparse.ArgumentParser()
-    p.add_argument('input_file')
+    p.add_argument('dev_file')
+    p.add_argument('eval_file')
     p.add_argument('output_folder')
+    p.add_argument('test_type')
     p.add_argument('stemming')
     p.add_argument('lower')
     p.add_argument('idf_type')
@@ -201,8 +207,10 @@ if __name__ == '__main__':
     p.add_argument('num_permutations')
     args = p.parse_args()
  
-    input_path = str(args.input_file)
+    dev_path = str(args.dev_file)
+    eval_path = str(args.eval_file)
     output_folder = str(args.output_folder)
+    test_type = str(args.test_type)
     stemming = bool(int(args.stemming))
     lower = bool(int(args.lower))
     idf_type = str(args.idf_type)
@@ -220,5 +228,24 @@ if __name__ == '__main__':
     info_order_type = str(args.info_order_type)
     num_permutations = int(args.num_permutations)
 
-    # Run the text summarizer with the given parameters
-    summarize_text(input_path, output_folder, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+    dev_output_folder = output_folder + "_devtest"
+    eval_output_folder = output_folder + "_evaltest"
+
+    # Run summarizer on either dev, eval, or both depending on test_type
+    if test_type == "dev":
+
+        # Run the text summarizer on dev data with the given parameters
+        summarize_text(dev_path, dev_output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+
+    elif test_type == "eval":
+
+        # Run the text summarizer on eval data with the given parameters
+        summarize_text(eval_path, eval_output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+
+    else:
+
+        # Run the text summarizer on dev data with the given parameters
+        summarize_text(dev_path, dev_output_folder, "dev", stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+
+        # Run the text summarizer on eval data with the given parameters
+        summarize_text(eval_path, eval_output_folder, "eval", stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
