@@ -50,7 +50,8 @@ class Document_Retriever:
         #############################
         self.acquaint = int(year) >= 1996 and int(year) <= 2000
 
-        self.acquaint2 = int(year) >= 2004 and int(year) <= 2006 and int(month) < 10
+        # The year 2006 is represented in both databases. October appears to be the month where the division is made
+        self.acquaint2 = int(year) >= 2004 and int(year) < 2006 or (int(year) == 2006 and int(month) < 10)
 
         self.gigaword = int(year) >= 2007 and int(year) <= 2008 or (int(year)==2006 and int(month)>=10)
 
@@ -83,34 +84,29 @@ class Document_Retriever:
     def retrieve_doc(self, doc_id):
         self.configure(doc_id)
         raw_doc = None
+        tree = self.xml_parser_cache.get(self.doc_path)
+
         if self.acquaint:
-            if self.doc_path in self.xml_parser_cache:
-                tree = self.xml_parser_cache[self.doc_path]
-            else:
+
+            if tree is None:
                 parser = etree.HTMLParser(encoding='utf-8', remove_blank_text=True)
                 with open(self.doc_path) as file:
                     tree = html.fragment_fromstring(file.read(), create_parent='body', parser=parser)
-                self.xml_parser_cache.update({self.doc_path: tree})
 
-            raw_doc = [element for element in tree.findall("doc") if element.find("docno").text == " " + doc_id + " "][
-                0]
+            raw_doc = [element for element in tree.findall("doc") if element.find("docno").text == " " + doc_id + " "][0]
+            raw_doc.getparent().remove(raw_doc)  # Removes previous accessed raw document from tree to save memory in cache
 
         elif self.acquaint2:
 
-            if self.doc_path in self.xml_parser_cache:
-                tree = self.xml_parser_cache[self.doc_path]
-            else:
+            if tree is None:
                 tree = etree.parse(self.doc_path)
 
-                self.xml_parser_cache.update({self.doc_path: tree})
-
             raw_doc = [element for element in tree.findall("DOC") if element.get("id") == doc_id][0]
+            #### Must not remove document from tree because documents repeat under different topics
 
         elif self.gigaword:
 
-            if self.doc_path in self.xml_parser_cache:
-                tree = self.xml_parser_cache[self.doc_path]
-            else:
+            if tree is None:
                 p = XMLParser(huge_tree=True) #### Some files are too large, without this they prevent parsing
 
                 with gzip.open(self.doc_path, 'rt', encoding='latin-1') as file:
@@ -122,10 +118,13 @@ class Document_Retriever:
 
                     tree = etree.fromstring('<DOCSTREAM>\n' + data.strip() + '\n</DOCSTREAM>\n',parser=p)
 
-                    self.xml_parser_cache.update({self.doc_path: tree})
 
             raw_doc = [element for element in tree.findall("DOC") if element.get("id") == doc_id][0]
+            raw_doc.getparent().remove(raw_doc)  # Removes previous accessed raw document from tree to save memory in cache
 
+
+
+        self.xml_parser_cache.update({self.doc_path: tree})
 
         return raw_doc
 
