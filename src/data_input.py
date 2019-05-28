@@ -143,7 +143,7 @@ class Topic:
                         idf=self.get_smooth_idf(token_value)
 
                     '''TODO: LOOK INTO USING STANDARD IFDF'''
-                    sentence.tf_idf[token_value] = token.raw_count * 1 #self.get_standard_idf(token)
+                    sentence.tf_idf[token_value] = token.raw_count * idf #self.get_standard_idf(token)
                     sentence.tf_idf_norm[token_value] = sentence.tf_norm_values[token_value] * idf
 
 class Document:
