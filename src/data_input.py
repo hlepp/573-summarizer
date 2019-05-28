@@ -4,31 +4,18 @@
 __author__ = "Benny Longwill"
 __email__ = "longwill@uw.edu"
 
-from nltk import word_tokenize, sent_tokenize, pos_tag, download, PorterStemmer, MWETokenizer
-#nltk.download('averaged_perceptron_tagger')
-from nltk.corpus import stopwords
 
+from nltk import word_tokenize, sent_tokenize, pos_tag, PorterStemmer
+
+from nltk.corpus import stopwords
 
 from bs4 import BeautifulSoup
 import document_retriever
 from math import log
 import os  # os module imported here to open multiple files at once
-import itertools ### Used to find groups of consecutive similar items in list for NN
-from itertools import groupby
-from operator import itemgetter
+import spacy
 
-
-
-# Load your usual SpaCy model (one of SpaCy English models)
-#import spacy
-
-#nlp = spacy.load("en")
-
-#import neuralcoref
-#neuralcoref.add_to_pipe(nlp, max_dist=100)
-#from nltk.stem import WordNetLemmatizer
-#from blingfire import text_to_words, text_to_sentences
-
+nlp = spacy.load('/home/khenner/shared_resources/en_core_web_md/en_core_web_md-2.1.0')
 
 stop_words = set(stopwords.words('english'))
 
@@ -115,6 +102,7 @@ class Topic:
             return self.idf[token]
         else:
             current_idf = -log(self.n_containing(token)/self.sent_count)
+
             self.idf[token] = current_idf
             return current_idf
 
@@ -154,7 +142,8 @@ class Topic:
                     except:
                         idf=self.get_smooth_idf(token_value)
 
-                    sentence.tf_idf[token_value] = token.raw_count * idf
+                    '''TODO: LOOK INTO USING STANDARD IFDF'''
+                    sentence.tf_idf[token_value] = token.raw_count * 1 #self.get_standard_idf(token)
                     sentence.tf_idf_norm[token_value] = sentence.tf_norm_values[token_value] * idf
 
 class Document:
@@ -180,6 +169,7 @@ class Document:
     # Takes Document object and the text from doc file. The block of text is separated into sentences as sentence objects and also tokenized using NLTK.
     def create_sentence_list(self, doc_text)->list:
         sentence_list=[]
+
         for doc_sentence in sent_tokenize(doc_text):
             current_sentence=Sentence(self, doc_sentence)  #Creates sentence object
             current_sentence.index=len(sentence_list)
@@ -189,6 +179,7 @@ class Document:
 #All sentences are part of a document of either Topic or Document type
 class Sentence:
     ps = PorterStemmer()
+
     stemming=False
     lower=False
 
@@ -196,6 +187,7 @@ class Sentence:
         self.score=0
         self.parent_doc=parent_doc
         self.original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
+        self.spacy_parse=nlp(self.original_sentence)
         self.nouns=set()
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
         self.raw_counts = {}
@@ -337,6 +329,7 @@ def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smo
         tf_type:str String input dictates tf representation in objects. Options are: 'term_frequency', 'log_normalization'
 
     """
+
     configure_class_objects(stemming,lower,idf_type,tf_type)
 
     with open(file_path) as f1:
@@ -440,23 +433,29 @@ def get_doc_attributes(raw_doc, headline_tag:str="", category_tag:str="", dateli
     dateline = None
     doc_text = None
 
+
+
     if headline_tag:
         headline_element = raw_doc.find(headline_tag)
         if headline_element is not None:
             headline = headline_element.text
+
 
     if category_tag:
         category_element = raw_doc.find(category_tag)
         if category_element is not None:
             category = category_element.text
 
+
     if dateline_tag:
         dateline_element = raw_doc.find(dateline_tag)
         if dateline_element is not None:
             dateline = dateline_element.text
 
+
     if text_tag:
         doc_text=' '.join(raw_doc.find(text_tag).itertext())
+
 
     return headline, category, dateline, doc_text
 

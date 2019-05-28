@@ -1,5 +1,5 @@
 universe = vanilla
-executable = /usr/bin/python3
+executable = /opt/python/gpu/python-3.6/bin/python3
 getenv = true
 #input =
 output = cmd_out_4
