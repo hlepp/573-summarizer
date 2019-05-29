@@ -3,8 +3,30 @@
 
 """Content realization for multi-document text summarization that generates well-formed sentences."""
 
-__author__ = "Amina Venton"
-__email__ = "aventon@uw.edu"
+__author__ = "Amina Venton, Shannon Ladymon"
+__email__ = "aventon@uw.edu, sladymon@uw.edu"
+
+
+def get_compressed_sentences(original_sent, spacy_parser):
+    """
+    TODO
+    Given an original sentence string, removes ......
+    """
+
+    # List of sentence strings to return
+    sentences_list = []  
+
+    # TODO: Remove news artifacts
+    # header, anything in parentheses, solo quotation marks
+
+    # TODO: Remove branches of syntax tree from spacy
+    # Remove Lead adverbials / conjunctions
+    # Remove adverbial clausal modifiers
+    # Remove nonrestrictive relative clauses
+    # Remove gerundive clauses
+
+    return sentences_list
+
 
 def realize_content(topics_with_summaries_in_order):
     """
