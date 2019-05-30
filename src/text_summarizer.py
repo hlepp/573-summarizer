@@ -134,7 +134,7 @@ def summarize_topics_list(topics, output_folder, test_type, d, intersent_thresho
     # Evaluates summaries for each topic
     # by running ROUGE-1 & ROUGE-2
 
-    eval_summary(output_folder)
+    eval_summary(output_folder, test_type)
     # TODO: Change to below version once evaluation accepts test_type
 #    eval_summary(output_folder, test_type)
 
