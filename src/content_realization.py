@@ -10,7 +10,60 @@ import spacy
 import sys
 import re
 
-def get_compressed_sentences(original_sent, spacy_parser):
+def clean_sentence(original_sent, remove_header, remove_parens, remove_quotes):
+    """
+    Cleans a sentence by fixing newlines and spaces, and optionally by removing
+    the news header, parenthetical information, and unpaired quotes.
+    """
+
+    # Start with the clean_sent set to the original as a default
+    clean_sent = original_sent
+
+    # Clean sentence by removing the header, if specified
+    if remove_header:
+        # Matches headlines of form "NEW YORK, July 1 (AP) --" and "NEW YORK _ " and "NEW YORK (AP) _"
+        header_re = re.compile(r"^\s+([A-Z]+\s*)+,?(\s*([a-zA-Z]+\.?)*\s*[0-9]*\s*)?(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
+        clean_sent = header_re.sub(r"", clean_sent)
+
+    # Clean sentence by removing any parenthetical information, if specified
+    if remove_parens:
+        # Matches any parenthetical information
+        parens_re = re.compile(r"\([^\)]+\)")
+        clean_sent = parens_re.sub(r"", clean_sent)
+
+    # Clean sentence by removing any unpaired quotes, if specified
+    if remove_quotes:
+        # Matches for different types of quotes (", ``, '') to find unpaired quotes
+        quote_re = re.compile(r"\"")
+        backtick_re = re.compile(r"``")
+        apostrophe_re = re.compile(r"''")
+
+        # Get the number of quotes to see if unmatched
+        num_quotes = len(quote_re.findall(clean_sent))
+        num_backticks = len(backtick_re.findall(clean_sent))
+        num_apostrophes = len(apostrophe_re.findall(clean_sent))
+
+        if num_quotes == 1:
+            # Remove unpaired " mark
+            clean_sent = quote_re.sub(r"", clean_sent)
+        if num_backticks == 1 and num_apostrophes == 0:
+            # Remove `` (open quote) unpaired with '' (closing quote)
+            clean_sent = backtick_re.sub(r"", clean_sent)
+        if num_apostrophes == 1 and num_backticks == 0:
+            # Remove '' (closing quote) unpaired with `` (open quote)
+            clean_sent = apostrophe_re.sub(r"", clean_sent)
+
+    # Remove any extra newlines
+    clean_sent = clean_sent.replace("\n", " ").strip()
+
+    # Remove any extra spaces
+    spaces_re = re.compile(r" {2,}")
+    clean_sent = spaces_re.sub(r" ", clean_sent)
+
+    return clean_sent
+
+
+def get_compressed_sentences(original_sent, spacy_parser, remove_header = False, remove_parens = False, remove_quotes = False, remove_appos = False, remove_advcl = False, remove_relcl = False, remove_acl = False):
     """
     TODO
     Given an original sentence string, removes ......
@@ -19,39 +72,19 @@ def get_compressed_sentences(original_sent, spacy_parser):
     # List of sentence strings to return
     sentences_list = []  
 
-
-    # Regexes to use in cleaning the sentence
-
-    # Matches headlines of form "NEW YORK, July 1 (AP) --" and "NEW YORK _ " and "NEW YORK (AP) _"
-    header_re = re.compile(r"^\s+([A-Z]+\s*)+,?(\s*([a-zA-Z]+\.?)*\s*[0-9]*\s*)?(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
-
-    # Matches any parenthetical information
-    parens_re = re.compile(r"\([^\)]+\)")
-
-    # Matches any quotes (to find single quotes)
-    quote_re = re.compile(r"\"")
-    # TODO: Fix to catch sentences with ``quote'' instead of "quote" as well
-
-    # Clean sentence by removing the header, parenthetical info, and single quotes
-
-    clean_sent = header_re.sub(r"", original_sent)
-    clean_sent = parens_re.sub(r"", clean_sent)
-
-    # Remove any single quotes 
-    num_quotes = len(quote_re.findall(clean_sent))
-    if num_quotes == 1:
-        clean_sent = quote_re.sub(r"", clean_sent)
-    
+    # Get clean version of the sentence
+    clean_sent = clean_sentence(original_sent, remove_header, remove_parens, remove_quotes)
 
     # Add this cleaned version of the sentence to the list
     sentences_list.append(clean_sent)
 
 
+
     # TODO: Remove branches of syntax tree from spacy
-    # Remove Lead adverbials / conjunctions
-    # Remove adverbial clausal modifiers
-    # Remove nonrestrictive relative clauses
-    # Remove gerundive clauses
+    # Remove appositional modifiers (appos)
+    # Remove adverbial clausal modifiers (advcl)
+    # Remove relative clauses (relcl)
+    # Remove clausal modifiers (acl)
 
 #    parsed_sent = spacy_parser(original_sent)
 

@@ -196,7 +196,6 @@ class Sentence:
         self.score=0
         self.parent_doc=parent_doc
         self.original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
-#        self.spacy_parse=nlp(self.original_sentence)
         self.nouns=set()
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
         self.raw_counts = {}
