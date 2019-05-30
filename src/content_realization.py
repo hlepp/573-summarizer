@@ -6,6 +6,9 @@
 __author__ = "Amina Venton, Shannon Ladymon"
 __email__ = "aventon@uw.edu, sladymon@uw.edu"
 
+import spacy
+import sys
+import re
 
 def get_compressed_sentences(original_sent, spacy_parser):
     """
@@ -16,14 +19,47 @@ def get_compressed_sentences(original_sent, spacy_parser):
     # List of sentence strings to return
     sentences_list = []  
 
-    # TODO: Remove news artifacts
-    # header, anything in parentheses, solo quotation marks
+
+    # Regexes to use in cleaning the sentence
+
+    # Matches headlines of form "NEW YORK, July 1 (AP) --" and "NEW YORK _ " and "NEW YORK (AP) _"
+    header_re = re.compile(r"^\s+([A-Z]+\s*)+,?(\s*([a-zA-Z]+\.?)*\s*[0-9]*\s*)?(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
+
+    # Matches any parenthetical information
+    parens_re = re.compile(r"\([^\)]+\)")
+
+    # Matches any quotes (to find single quotes)
+    quote_re = re.compile(r"\"")
+    # TODO: Fix to catch sentences with ``quote'' instead of "quote" as well
+
+    # Clean sentence by removing the header, parenthetical info, and single quotes
+
+    clean_sent = header_re.sub(r"", original_sent)
+    clean_sent = parens_re.sub(r"", clean_sent)
+
+    # Remove any single quotes 
+    num_quotes = len(quote_re.findall(clean_sent))
+    if num_quotes == 1:
+        clean_sent = quote_re.sub(r"", clean_sent)
+    
+
+    # Add this cleaned version of the sentence to the list
+    sentences_list.append(clean_sent)
+
 
     # TODO: Remove branches of syntax tree from spacy
     # Remove Lead adverbials / conjunctions
     # Remove adverbial clausal modifiers
     # Remove nonrestrictive relative clauses
     # Remove gerundive clauses
+
+#    parsed_sent = spacy_parser(original_sent)
+
+#    for token in parsed_sent:
+#        print("\ttoken_text={}, token.dep_={}, token.head.text={}, token.head.pos_={}".format(token.text, token.dep_, token.head.text, token.head.pos_))
+
+#    sys.exit("TESTING: done with one sentence")
+
 
     return sentences_list
 

@@ -11,11 +11,12 @@ from nltk.corpus import stopwords
 
 from bs4 import BeautifulSoup
 import document_retriever
+from content_realization import get_compressed_sentences
 from math import log
 import os  # os module imported here to open multiple files at once
 import spacy
 
-nlp = spacy.load('/home/khenner/shared_resources/en_core_web_md/en_core_web_md-2.1.0')
+spacy_parser = spacy.load('/home/longwill/en_core_web_md/en_core_web_md-2.1.0')
 
 stop_words = set(stopwords.words('english'))
 
@@ -171,9 +172,17 @@ class Document:
         sentence_list=[]
 
         for doc_sentence in sent_tokenize(doc_text):
-            current_sentence=Sentence(self, doc_sentence)  #Creates sentence object
-            current_sentence.index=len(sentence_list)
-            sentence_list.append(current_sentence)
+
+            # Get compressed versions of the original sentence
+            compressed_sentences = get_compressed_sentences(doc_sentence, spacy_parser)
+
+            # Add a sentence object for each compressed sentence
+            for sent in compressed_sentences:
+
+                current_sentence=Sentence(self, sent)  #Creates sentence object
+                current_sentence.index=len(sentence_list)
+                sentence_list.append(current_sentence)
+
         return sentence_list
 
 #All sentences are part of a document of either Topic or Document type
@@ -187,7 +196,7 @@ class Sentence:
         self.score=0
         self.parent_doc=parent_doc
         self.original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
-        self.spacy_parse=nlp(self.original_sentence)
+#        self.spacy_parse=nlp(self.original_sentence)
         self.nouns=set()
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
         self.raw_counts = {}
