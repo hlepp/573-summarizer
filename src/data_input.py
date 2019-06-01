@@ -17,7 +17,6 @@ import os  # os module imported here to open multiple files at once
 import spacy
 
 spacy_parser = spacy.load('/home/longwill/en_core_web_md/en_core_web_md-2.1.0')
-
 stop_words = set(stopwords.words('english'))
 
 
@@ -175,7 +174,8 @@ class Document:
 
             # Get compressed versions of the original sentence
             compressed_sentences = get_compressed_sentences(doc_sentence, spacy_parser)
-
+            
+            #compressed_sentences = get_compressed_sentences(original_sent, spacy_parser, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)
             # Add a sentence object for each compressed sentence
             for sent in compressed_sentences:
 

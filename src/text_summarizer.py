@@ -30,8 +30,6 @@ def write_summary_files(topics_with_final_summaries, output_folder):
     output_dir = 'outputs/' + output_folder + '/'
 
     # Variable to create unique ending for files
-
-    # once ROUGE can process that output
     numeric_count = 1
 
     for topic in topics_with_final_summaries:
@@ -135,12 +133,10 @@ def summarize_topics_list(topics, output_folder, test_type, d, intersent_thresho
     # by running ROUGE-1 & ROUGE-2
 
     eval_summary(output_folder, test_type)
-    # TODO: Change to below version once evaluation accepts test_type
-#    eval_summary(output_folder, test_type)
 
 
 
-def summarize_text(file_path, output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations):
+def summarize_text(file_path, output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl):
     """
     Creates extractive summaries (<= 100 words) of multi-document news sets from TAC 2009/2010
     Prints one summary file per topic and nests inside outputs/<output_folder>/
@@ -166,6 +162,13 @@ def summarize_text(file_path, output_folder, test_type, stemming, lower, idf_typ
         intersent_formula: which formula to use for inter-sentential similarity weighting - cos (cosine similarity) or norm (normalized generation probability)
         info_order_type: entity or chron
         num_permutations: int for how many SVM permutations
+        remove_header:bool True if the header should be removed in sentence compression
+        remove_parens:bool True if parenthetical information should be removed in sentence compression
+        remove_quotes:bool True if unpaired quotes should be removed in sentence compression
+        remove_appos:bool True if appositional modifier should be removed in sentence compression
+        remove_advcl:bool True if adverbial clause modifier should be removed in sentence compression
+        remove_relcl:bool True if relative clause modifier should be removed in sentence compression
+        remove_acl: True if a finite or non-finite clausal modifier should be removed in in sentence compression
 
     Returns:
         topic_list: the modified topic_list from the input, with a list of selected sentences
@@ -176,6 +179,7 @@ def summarize_text(file_path, output_folder, test_type, stemming, lower, idf_typ
     # Read in input data
     # and return a list of Topic objects (with Documents/Sentences)
 
+    #topics = get_data(file_path, stemming, lower, idf_type, tf_type, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)
     topics = get_data(file_path, stemming, lower, idf_type, tf_type)
 
     summarize_topics_list(topics, output_folder, test_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
@@ -205,6 +209,13 @@ if __name__ == '__main__':
     p.add_argument('intersent_formula')
     p.add_argument('info_order_type')
     p.add_argument('num_permutations')
+    p.add_argument('remove_header')
+    p.add_argument('remove_parens')
+    p.add_argument('remove_quotes')
+    p.add_argument('remove_appos')
+    p.add_argument('remove_advcl')
+    p.add_argument('remove_relcl')
+    p.add_argument('remove_acl')
     args = p.parse_args()
  
     dev_path = str(args.dev_file)
@@ -227,6 +238,13 @@ if __name__ == '__main__':
     intersent_formula = str(args.intersent_formula)
     info_order_type = str(args.info_order_type)
     num_permutations = int(args.num_permutations)
+    remove_header = bool(int(args.remove_header))
+    remove_parens = bool(int(args.remove_parens))
+    remove_quotes = bool(int(args.remove_quotes))
+    remove_appos = bool(int(args.remove_appos))
+    remove_advcl = bool(int(args.remove_advcl))
+    remove_relcl = bool(int(args.remove_relcl))
+    remove_acl = bool(int(args.remove_acl))
 
     dev_output_folder = output_folder + "_devtest"
     eval_output_folder = output_folder + "_evaltest"
@@ -235,17 +253,17 @@ if __name__ == '__main__':
     if test_type == "dev":
 
         # Run the text summarizer on dev data with the given parameters
-        summarize_text(dev_path, dev_output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+        summarize_text(dev_path, dev_output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)	
 
     elif test_type == "eval":
 
         # Run the text summarizer on eval data with the given parameters
-        summarize_text(eval_path, eval_output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+        summarize_text(eval_path, eval_output_folder, test_type, stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)	
 
     else:
 
         # Run the text summarizer on dev data with the given parameters
-        summarize_text(dev_path, dev_output_folder, "dev", stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+        summarize_text(dev_path, dev_output_folder, "dev", stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)	
 
         # Run the text summarizer on eval data with the given parameters
-        summarize_text(eval_path, eval_output_folder, "eval", stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)	
+        summarize_text(eval_path, eval_output_folder, "eval", stemming, lower, idf_type, tf_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)	
