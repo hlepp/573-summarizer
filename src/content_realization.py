@@ -161,9 +161,19 @@ def clean_sentence(original_sent, remove_header, remove_parens, remove_quotes):
 
     # Clean sentence by removing the header, if specified
     if remove_header:
-        # Matches headlines of form "NEW YORK, July 1 (AP) --" and "NEW YORK _ " and "NEW YORK (AP) _"
-        header_re = re.compile(r"^\s+([A-Z]+\s*)+,?(\s*([a-zA-Z]+\.?)*\s*[0-9]*\s*)?(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
-        clean_sent = header_re.sub(r"", clean_sent)
+
+        # Matches headers of form "NEW YORK, July 1 (AP) --" and "NEW YORK _ " and "NEW YORK (AP) _"
+        header_1_re = re.compile(r"^\s+([A-Z]+\s*)+,?(\s*([a-zA-Z]+\.?)*\s*[0-9]*\s*)?(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
+
+        # Matches headers of form "BC-FLA (Tampa) --" and "COLO-SCHOOL-SHOOTING (Littleton, Colo.) _"
+        header_2_re = re.compile(r"^([A-Z]+-?)+\s\([a-zA-Z,\s\.]+\)\s((--)|(_))")
+
+        # Matches headers of form "(AP) --" and "_"
+        header_3_re = re.compile(r"^(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
+
+        clean_sent = header_1_re.sub(r"", clean_sent)
+        clean_sent = header_2_re.sub(r"", clean_sent)
+        clean_sent = header_3_re.sub(r"", clean_sent)
 
     # Clean sentence by removing any parenthetical information, if specified
     if remove_parens:
@@ -203,7 +213,7 @@ def clean_sentence(original_sent, remove_header, remove_parens, remove_quotes):
     return clean_sent
 
 
-def get_compressed_sentences(original_sent, spacy_parser, remove_header = False, remove_parens = False, remove_quotes = False, remove_appos = False, remove_advcl = False, remove_relcl = False, remove_acl = True):
+def get_compressed_sentences(original_sent, spacy_parser, remove_header = True, remove_parens = False, remove_quotes = False, remove_appos = False, remove_advcl = False, remove_relcl = False, remove_acl = False):
 #def get_compressed_sentences(original_sent, spacy_parser, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl):
     """
     This function performs sentence compression given an sentence string and rule-type.
@@ -263,8 +273,8 @@ def get_compressed_sentences(original_sent, spacy_parser, remove_header = False,
     end_time = time.time()
     #print("Total runtime for compressed_sent: {}".format(end_time - start_time))
 
-    if "BURBANK, Calif. (AP)" in original_sent:
-        sys.exit("TESTING: done up to Burbank sentence")
+#    if "BURBANK, Calif. (AP)" in original_sent:
+#        sys.exit("TESTING: done up to Burbank sentence")
 
     return sentences_list
 
