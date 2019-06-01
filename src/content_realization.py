@@ -8,7 +8,6 @@ __author__ = "Amina Venton, Shannon Ladymon"
 __email__ = "aventon@uw.edu, sladymon@uw.edu"
 
 import spacy
-import sys
 import re
 
 
@@ -126,14 +125,8 @@ def trim_sentence(doc, dependency_type):
         # Remove the subtree and create new sentence
         new_sent = remove_subtree(doc, clean_sent, indices_to_remove_subtree)
 
-
-#        print("\n\n***Dependency Found***")
-#        print("sent:\n{}".format(clean_sent))
-#        print("New sent:\n{}".format(new_sent))
-
+        # Remove any left over punctuation from the subtree removal
         new_sent = clean_punctuation(new_sent)
-
-#        print("cleaned new sent:\n{}".format(new_sent))
 
         # Return the new trimmed sentence
         return new_sent
@@ -296,8 +289,5 @@ def get_compressed_sentences(original_sent, spacy_parser, remove_header, remove_
         if remove_acl:
             new_sent = trim_sentence(doc, "acl")
             sentences_list.append(new_sent)  
-
-#    if "BURBANK, Calif. (AP)" in original_sent:
-#        sys.exit("TESTING: done up to Burbank sentence")
 
     return sentences_list
