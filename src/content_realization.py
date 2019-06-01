@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Content realization for multi-document text summarization that generates well-formed sentences."""
+"""Content realization for multi-document text summarization 
+that generates cleaned and compressed versions of sentences."""
 
 __author__ = "Amina Venton, Shannon Ladymon"
 __email__ = "aventon@uw.edu, sladymon@uw.edu"
@@ -85,6 +86,7 @@ def find_subtree_indices(doc, dependency_type):
     # Return list of indices
     return indices_to_remove_subtree
 
+
 def trim_sentence(doc, dependency_type):
 
     """
@@ -124,9 +126,14 @@ def trim_sentence(doc, dependency_type):
         # Remove the subtree and create new sentence
         new_sent = remove_subtree(doc, clean_sent, indices_to_remove_subtree)
 
-#        print("***Dependency Found***")
-#        print("Clean sent: {}".format(clean_sent))
-#        print("New sent: {}".format(new_sent))
+
+#        print("\n\n***Dependency Found***")
+#        print("sent:\n{}".format(clean_sent))
+#        print("New sent:\n{}".format(new_sent))
+
+        new_sent = clean_punctuation(new_sent)
+
+#        print("cleaned new sent:\n{}".format(new_sent))
 
         # Return the new trimmed sentence
         return new_sent
@@ -154,14 +161,16 @@ def clean_sentence(original_sent, remove_header, remove_parens, remove_quotes):
     # Start with the clean_sent set to the original as a default
     clean_sent = original_sent
 
+
+
     # Clean sentence by removing the header, if specified
     if remove_header:
 
         # Matches headers of form "NEW YORK, July 1 (AP) --" and "NEW YORK _ " and "NEW YORK (AP) _"
-        header_1_re = re.compile(r"^\s+([A-Z]+\s*)+,?(\s*([a-zA-Z]+\.?)*\s*[0-9]*\s*)?(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
+        header_1_re = re.compile(r"^\s+([A-Z]+\s*)+,?(\s*([a-zA-Z]+\.?\s)*[0-9]*\s*)?(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
 
         # Matches headers of form "BC-FLA (Tampa) --" and "COLO-SCHOOL-SHOOTING (Littleton, Colo.) _"
-        header_2_re = re.compile(r"^([A-Z]+-?)+\s\([a-zA-Z,\s\.]+\)\s((--)|(_))")
+        header_2_re = re.compile(r"^\s*([A-Z]+-?)+\s\([a-zA-Z,\s\.]+\)\s((--)|(_))")
 
         # Matches headers of form "(AP) --" and "_"
         header_3_re = re.compile(r"^(\([a-zA-Z]+\))?\s*((--)|(_))\s*")
@@ -206,6 +215,34 @@ def clean_sentence(original_sent, remove_header, remove_parens, remove_quotes):
     clean_sent = spaces_re.sub(r" ", clean_sent)
 
     return clean_sent
+
+
+def clean_punctuation(sent):
+    "Cleans leftover punctuation from sentences after they have been compressed"
+
+    if len(sent) == 0:
+        return sent
+
+    # Remove comma pairs with nothing in between
+    sent = sent.replace(", , ", " ")
+
+    # Remove extra commas before end of sentence
+    sent = sent.replace(", .", ".")
+
+    # Remove extra spaces
+    sent = sent.replace("  ", " ")
+    sent = sent.replace(" ,", ",")
+    sent = sent.replace(" .", ".")
+
+    # Remove commas at start of sentence
+    start_comma_re = re.compile(r"^\s*, ")
+    sent = start_comma_re.sub(r"", sent)
+
+    # Remove quotations with nothing but a comma inside
+    quotes_with_comma_re = re.compile(r"(\"|(``)),(\"|(''))")
+    sent = quotes_with_comma_re.sub(r"", sent)
+
+    return sent
 
 
 def get_compressed_sentences(original_sent, spacy_parser, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl):
@@ -264,4 +301,3 @@ def get_compressed_sentences(original_sent, spacy_parser, remove_header, remove_
 #        sys.exit("TESTING: done up to Burbank sentence")
 
     return sentences_list
-
