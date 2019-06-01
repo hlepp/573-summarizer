@@ -10,7 +10,6 @@ __email__ = \
 from data_input import get_data, get_gold_standard_docs
 from content_selection import select_content
 from info_ordering import order_info_chron, order_info_entity, get_training_vectors
-from content_realization import realize_content
 from evaluation import eval_summary
 from sys import argv
 import argparse
@@ -117,17 +116,8 @@ def summarize_topics_list(topics, output_folder, test_type, d, intersent_thresho
         topics_with_summaries_in_order = order_info_chron(topics_with_summaries)
 
 
-
-    # Content Realization
-    # Process sentences to make well-formed
-    # Returns the final list of topics with well-formed sentences in each
-    # topic.summary variable
-
-    topics_with_final_summaries = realize_content(topics_with_summaries_in_order)
-
     # Writes summaries to file for each topic
-
-    write_summary_files(topics_with_final_summaries, output_folder)
+    write_summary_files(topics_with_summaries_in_order, output_folder)
 
     # Evaluates summaries for each topic
     # by running ROUGE-1 & ROUGE-2
@@ -177,10 +167,10 @@ def summarize_text(file_path, output_folder, test_type, stemming, lower, idf_typ
     """
     
     # Read in input data
+    # and handle content realization as a pre-processing step
     # and return a list of Topic objects (with Documents/Sentences)
-
-    #topics = get_data(file_path, stemming, lower, idf_type, tf_type, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)
-    topics = get_data(file_path, stemming, lower, idf_type, tf_type)
+    topics = get_data(file_path, stemming, lower, idf_type, tf_type, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)
+#    topics = get_data(file_path, stemming, lower, idf_type, tf_type)
 
     summarize_topics_list(topics, output_folder, test_type, d, intersent_threshold, summary_threshold, epsilon, mle_lambda, k, min_sent_len, include_narrative, bias_formula, intersent_formula, info_order_type, num_permutations)
 
