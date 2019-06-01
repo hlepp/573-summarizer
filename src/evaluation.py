@@ -57,7 +57,7 @@ def eval_summary(output_folder, data_type):
         + ' -a -n 2 -x -m -c 95 -r 1000 -f A -p 0.5 -t 0 -l 100 -s -d ' \
         + CONFIG_FILE_WITH_PATH
     stdout = subprocess.check_output(COMMAND.split())
-    output_file = "results/" + output_folder + "_" + data_type + "_rouge_scores.out"
+    output_file = "results/" + output_folder +  "_rouge_scores.out"
     results = open(output_file, 'w+')
     results.write(stdout.decode())
     results.close()
