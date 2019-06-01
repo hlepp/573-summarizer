@@ -7,147 +7,132 @@ __author__ = "Amina Venton, Shannon Ladymon"
 __email__ = "aventon@uw.edu, sladymon@uw.edu"
 
 import spacy
-from spacy.attrs import IS_PUNCT, POS, TAG, DEP, ENT_TYPE, HEAD, ID, ORTH
-from spacy.tokens import Doc
-import numpy
 import sys
 import re
-import time
-
-def get_spaces(new_doc_np_array):
-    """
-    This function takes in a new numpy array of the Doc and
-    re-calculates which token in the Doc should be followed by a space.
-    The spaces in the new Doc only affect punctuation.
-    Ex: "Hello ! "-> "Hello!"
- 
-    A list of boolean values are returned for each token
-    indicating whether each word has a subsequent space
-    tokens -> ["Hello", "!"]
-    spaces bool -> [False, False]
-
-    """
-
-    # List to get indices of space before punctuation
-    indices_of_space_before_punc = []
-
-    # Iterate through each attribute, find the punctuation token index (minus one), add to list
-    for array_index, array in enumerate(new_doc_np_array):
-
-        # The first token attribute in each array IS_PUNCT, attribute value = 1 if true
-        if array[0] == 1:
-            # Space will be one position before punctuation index
-            indices_of_space_before_punc.append(array_index - 1)
-
-    # A list of boolean values indicating whether each word has a subsequent space
-    # False if the token is followed by punctuation or the last token, true otherwise
-    spaces = [False if any(x == i for x in indices_of_space_before_punc) or i == new_doc_np_array.shape[0] - 1
-              else True for i in range(new_doc_np_array.shape[0])]
-
-    # Return boolean values
-    return spaces
 
 
-def remove_subtree(doc, indices_to_remove_subtree):
+def remove_subtree(doc, clean_sent, indices_to_remove_subtree):
     """
     This function removes a subtree given a spaCy Doc object and
-    the indices of each token to remove.
+    the indices of each token to remove. The indices are used in a
+    spaCy Span object to get the tokens of the subtree.
 
-    The Doc is converted to a numpy array shape (N, M), where N is
-    the length of the Doc (in tokens) and M is a sequence of attributes,
-    in order to remove a given subtree.
+    Note:
+        Span object -> slice doc[start : end]
+            start: The index of the first token of the span
+            end: The index of the first token after the span.
 
-    A new Doc object is created with given attributes and words and
-    spaces are also corrected. The new Doc is returned.
+    Args:
+        doc: spaCy Doc of the clean sentence
+        clean_sent:str the string of the clean sentence Doc object
+        indices_to_remove_subtree: list of indices of the subtree to be removed
+
+    Return:
+        new_sent:str the newly trimmed sentence
 
     """
 
-    # Create array with token attributes for original doc
-    original_doc_np_array = doc.to_array([IS_PUNCT, POS, TAG, DEP, ENT_TYPE, HEAD, ID, ORTH])
+    # Create span of the subtree to be removed
+    span_of_subtree_start = indices_to_remove_subtree[0]
+    span_of_subtree_end = indices_to_remove_subtree[-1] + 1
+    span_to_be_removed = doc[span_of_subtree_start:span_of_subtree_end].text
 
-    # Create new array with the removed subtree from the original array
-    new_doc_np_array = numpy.delete(original_doc_np_array, indices_to_remove_subtree, axis=0)
+    # Remove span from the clean sentence
+    new_sent = clean_sent.replace(span_to_be_removed, "")
 
-    # Tokens with punctuation will now be separated -> "that ,"
-    # Get correct spaces for the new Doc object
-    spaces = get_spaces(new_doc_np_array)
+    # Return the new sentence
+    return new_sent
 
-    # Create new spaCy Doc object
-    new_doc = Doc(doc.vocab, words=[token.text for token_index, token in enumerate(doc) if
-                                    token_index not in indices_to_remove_subtree], spaces=spaces)
 
-    # Load token attributes to new spaCy Doc object
-    new_doc.from_array([IS_PUNCT, POS, TAG, DEP, ENT_TYPE, HEAD, ID, ORTH], new_doc_np_array)
+def find_subtree_indices(doc, dependency_type):
+    """
+    This function finds and returns the indices of the entire clause
+    (each token) in the subtree to be removed.
 
-    return new_doc
+    Args:
+        doc: spaCy Doc of the clean sentence
+        dependency_type:str Options are "appos", "acl", "relcl", "advcl"
 
+    Return:
+        indices_to_remove_subtree: list of indices of the subtree
+
+    """
+
+    # List of indices of clause tokens to be removed in the sentence
+    indices_to_remove_subtree = []
+
+    # List of unique spaCy hashes for string tokens in the doc
+    # Position remains the same from original doc
+    hash_ids_of_tokens = [token.orth for token in doc]
+
+    # Iterate through the doc to get the dep clause subtree
+    for index, token in enumerate(doc):
+
+        # Check for dependency label
+        if token.dep_ == dependency_type:
+
+            # Get the indices of subtree- all tokens of the clause
+            for subtree_token in token.subtree:
+                # Get the unique hash id for the subtree token
+                subtree_token_id = subtree_token.orth
+
+                # Look up the token's index in the doc
+                subtree_token_index_in_doc = hash_ids_of_tokens.index(subtree_token_id)
+
+                # Add to list of indices to be removed
+                indices_to_remove_subtree.append(subtree_token_index_in_doc)
+
+    # Return list of indices
+    return indices_to_remove_subtree
 
 def trim_sentence(doc, dependency_type):
 
     """
     This function trims a sentence given a spaCy Doc and
-    the string dependency type corresponding to the clause to be removed.
-    :param dependency_type: "appos", "acl", "relcl", "advcl"
+    the dependency type corresponding to the clause to be removed.
+    The Doc is converted to a string using a spaCy Span object.
 
-    The new sentence with clause removed is returned in a spaCy Doc.
-    If no dependency found original Doc is returned.
+    The new sentence with clause removed is returned.
+    If no dependency found original clean sentence is returned.
+
+    Note:
+        Span object -> slice doc[start : end]
+            start: The index of the first token of the span
+            end: The index of the first token after the span.
+
+    Args:
+        doc: spaCy Doc of the clean sentence
+        dependency_type:str Options are "appos", "acl", "relcl", "advcl"
+
+    Return:
+        new_sent:str newly trimmed sentence or
+        clean_sent:str original clean sentence
 
     """
 
+    # Convert Doc to string using a Doc Span, whole Span-> no start and end
+    clean_sent = doc[:].text
+
     # Flag that indicates if dependency found, trim the sentence
-    dependency_found = False
+    dependency_found = any(True for token in doc if token.dep_ == dependency_type)
 
-    # List of clause tokens in the subtree
-    tokens_in_subtree = []
-
-    # List of indices of clause tokens in the Doc
-    indices_to_remove_subtree = []
-
-    # Iterate through the doc to get the dep clause subtree
-    for token in doc:
-
-        # Check for dependency label
-        if token.dep_ == dependency_type:
-            dependency_found = True
-
-            # If found, get the subtree- all tokens of the clause
-            for subtree_token in token.subtree:
-
-                # Get the preceding punct token in the subtree -> ( ABC
-                # Exclude first token
-                if doc[0] != subtree_token:
-                    if subtree_token.nbor(-1).text in (",", "(",):
-                        tokens_in_subtree.append(subtree_token.nbor(-1))
-
-                # Get the token in the subtree -> ABC
-                tokens_in_subtree.append(subtree_token)
-
-                # Get the following punct token in the subtree -> ABC )
-                # Exclude last token
-                if doc[-1] != subtree_token:
-                    if subtree_token.nbor(1).text in (",", ")"):
-                        tokens_in_subtree.append(subtree_token.nbor(1))
-
-
-    # Trim the sentence
     if dependency_found:
-        # Get the indices of the tokens to be removed in the Doc object
-        for index, token in enumerate(doc):
-            if token in tokens_in_subtree:
-                indices_to_remove_subtree.append(index)
-        
-        # Remove the subtree and create new Doc
-        new_doc = remove_subtree(doc, indices_to_remove_subtree)
-        
-        print("***Dependency Found***")
-        print("Clean sent: {}".format(doc[:].text))
-        print("New Sentence: {}".format(new_doc[:].text))
 
-        # Return the new trimmed Doc in a string
-        return new_doc[:].text
+        # Get list of indices of clause tokens to be removed in the sentence
+        indices_to_remove_subtree = find_subtree_indices(doc, dependency_type)
 
-    # Return original doc in a string if no dependency found
-    return doc[:].text
+        # Remove the subtree and create new sentence
+        new_sent = remove_subtree(doc, clean_sent, indices_to_remove_subtree)
+
+#        print("***Dependency Found***")
+#        print("Clean sent: {}".format(clean_sent))
+#        print("New sent: {}".format(new_sent))
+
+        # Return the new trimmed sentence
+        return new_sent
+
+    # Return original sentence if no dependency found
+    return clean_sent
 
 
 def clean_sentence(original_sent, remove_header, remove_parens, remove_quotes):
@@ -241,7 +226,6 @@ def get_compressed_sentences(original_sent, spacy_parser, remove_header, remove_
     Returns:
         sentences_list: list of compressed versions of the original sentence
     """
-    start_time = time.time()
     # List of sentence strings to return
     sentences_list = []  
 
@@ -251,55 +235,33 @@ def get_compressed_sentences(original_sent, spacy_parser, remove_header, remove_
     # Add this cleaned version of the sentence to the list
     sentences_list.append(clean_sent)
 
-
     # Remove branches of syntax tree from spaCy Doc
-    if remove_appos or remove_advcl or remove_relcl or remove_acl:
+    # Sentences will only be trimmed if sent len > 0 and at least one rule condition is met
+    if clean_sent and (remove_appos or remove_advcl or remove_relcl or remove_acl):
         doc = spacy_parser(clean_sent)
     
         # Remove appositional modifiers (appos)
         if remove_appos:
-            new_doc_sent = trim_sentence(doc, "appos")
-            sentences_list.append(new_doc_sent)
+            new_sent = trim_sentence(doc, "appos")
+            sentences_list.append(new_sent)
 
         # Remove adverbial clausal modifiers (advcl)
         if remove_advcl:
-            new_doc_sent = trim_sentence(doc, "advcl")
-            sentences_list.append(new_doc_sent)
+            new_sent = trim_sentence(doc, "advcl")
+            sentences_list.append(new_sent)
 
         # Remove relative clauses (relcl)
         if remove_relcl:
-            new_doc_sent = trim_sentence(doc, "relcl")
-            sentences_list.append(new_doc_sent)
+            new_sent = trim_sentence(doc, "relcl")
+            sentences_list.append(new_sent)
 
         # Remove clausal modifiers (acl)
         if remove_acl:
-            new_doc_sent = trim_sentence(doc, "acl")
-            sentences_list.append(new_doc_sent) 
-
-    
-        #print("New doc sent: {}".format(new_doc_sent))
-    
-    end_time = time.time()
-    #print("Total runtime for compressed_sent: {}".format(end_time - start_time))
+            new_sent = trim_sentence(doc, "acl")
+            sentences_list.append(new_sent)  
 
 #    if "BURBANK, Calif. (AP)" in original_sent:
 #        sys.exit("TESTING: done up to Burbank sentence")
 
     return sentences_list
 
-
-"""
-
-#TODO: testing remove when done
-if __name__ == '__main__':
-
-    spacy_parser = spacy.load('/home/longwill/en_core_web_md/en_core_web_md-2.1.0')
-    
-    original_sent = "I wanted to tell you that, Bill, John's cousin, lives in Seattle."
-    #original_sent = "The accident happened as the night was falling."
-    #original_sent = "I saw the book which you bought."
-    #original_sent = "I admire that you are honest."
-    get_compressed_sentences(original_sent, spacy_parser, remove_header = False, remove_parens = False, remove_quotes = False, remove_appos = True, remove_advcl = True, remove_relcl = True, remove_acl = True)
-
-
-"""
