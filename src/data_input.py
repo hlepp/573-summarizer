@@ -11,12 +11,12 @@ from nltk.corpus import stopwords
 
 from bs4 import BeautifulSoup
 import document_retriever
+from content_realization import get_compressed_sentences
 from math import log
 import os  # os module imported here to open multiple files at once
 import spacy
 
-nlp = spacy.load('/home/khenner/shared_resources/en_core_web_md/en_core_web_md-2.1.0')
-
+spacy_parser = spacy.load('/home/longwill/en_core_web_md/en_core_web_md-2.1.0')
 stop_words = set(stopwords.words('english'))
 
 
@@ -142,7 +142,6 @@ class Topic:
                     except:
                         idf=self.get_smooth_idf(token_value)
 
-                    '''TODO: LOOK INTO USING STANDARD IFDF'''
                     sentence.tf_idf[token_value] = token.raw_count * idf #self.get_standard_idf(token)
                     sentence.tf_idf_norm[token_value] = sentence.tf_norm_values[token_value] * idf
 
@@ -171,9 +170,16 @@ class Document:
         sentence_list=[]
 
         for doc_sentence in sent_tokenize(doc_text):
-            current_sentence=Sentence(self, doc_sentence)  #Creates sentence object
-            current_sentence.index=len(sentence_list)
-            sentence_list.append(current_sentence)
+
+            # Get compressed versions of the original sentence
+            compressed_sentences = get_compressed_sentences(doc_sentence, spacy_parser, Document.remove_header, Document.remove_parens, Document.remove_quotes, Document.remove_appos, Document.remove_advcl, Document.remove_relcl, Document.remove_acl)
+            # Add a sentence object for each compressed sentence
+            for sent in compressed_sentences:
+
+                current_sentence=Sentence(self, sent)  #Creates sentence object
+                current_sentence.index=len(sentence_list)
+                sentence_list.append(current_sentence)
+
         return sentence_list
 
 #All sentences are part of a document of either Topic or Document type
@@ -187,7 +193,6 @@ class Sentence:
         self.score=0
         self.parent_doc=parent_doc
         self.original_sentence = original_sentence.replace("\n", " ").strip().replace("  ", " ")
-        self.spacy_parse=nlp(self.original_sentence)
         self.nouns=set()
         self.sent_len = original_sentence.count(" ") + 1   #Counts words in original sentence
         self.raw_counts = {}
@@ -318,7 +323,7 @@ headline_tag='headline'
 ###############################
 
 # Takes a file path, collects all data and stores into a list of class object 'Topic' data structures
-def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smooth_idf',tf_type="term_frequency")->list:
+def get_data(file_path:str, stemming:bool, lower:bool, idf_type, tf_type, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)->list:
     """Extracts database documents and creates data structure objects to hold them. Returns a list of Topic objects
 
     Args:
@@ -327,10 +332,18 @@ def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smo
         lower:bool True enables each sentence to be stored in lower case, False does nothing.
         idf_type:str String input dictates idf representation in objects. Options are: 'smooth_idf', 'probabilistic_idf' , 'standard_idf' , and 'unary_idf'
         tf_type:str String input dictates tf representation in objects. Options are: 'term_frequency', 'log_normalization'
+        remove_header: True if the header should be removed from the sentence
+        remove_parens: True if parenthetical information should be removed from the sentence
+        remove_quotes: True if unpaired quotes should be removed from the sentence
+        remove_appos: True if appositional modifier should be removed from the sentence
+        remove_advcl: True if adverbial clause modifier should be removed from the sentence
+        remove_relcl: True if relative clause modifier should be removed from the sentence
+        remove_acl: True if a finite or non-finite clausal modifier shoule be removed from the sentence
 
     """
 
-    configure_class_objects(stemming,lower,idf_type,tf_type)
+    # Set all the hyperparamaters
+    configure_class_objects(stemming, lower, idf_type, tf_type, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl)
 
     with open(file_path) as f1:
         task_data = f1.read()
@@ -341,7 +354,7 @@ def get_data(file_path:str, stemming:bool=False, lower:bool=False, idf_type='smo
     return get_topics_list(raw_topics, get_categories(file_path))
 
 # unary_idf smooth_idf standard_idf probabilistic_idf
-def configure_class_objects(stemming:bool,lower:bool, idf_type:str, tf_type:str):
+def configure_class_objects(stemming:bool,lower:bool, idf_type:str, tf_type:str, remove_header, remove_parens, remove_quotes, remove_appos, remove_advcl, remove_relcl, remove_acl):
 
     if stemming:
         Sentence.stemming = stemming
@@ -351,6 +364,14 @@ def configure_class_objects(stemming:bool,lower:bool, idf_type:str, tf_type:str)
         Topic.idf_type=idf_type
     if tf_type:
         Topic.tf_type=tf_type
+
+    Document.remove_header = remove_header
+    Document.remove_parens = remove_parens
+    Document.remove_quotes = remove_quotes
+    Document.remove_appos = remove_appos
+    Document.remove_advcl = remove_advcl
+    Document.remove_relcl = remove_relcl
+    Document.remove_acl = remove_acl
 
 def get_categories(file_path:str):
 
