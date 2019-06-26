@@ -43,11 +43,11 @@ remove_acl = True
 ## Authors
 Shannon Ladymon, sladymon@uw.edu
 
-Amina Venton, aventon@uw.edu
-
 Haley Lepp, hlepp@uw.edu 
 
 Ben Longwill, longwill@uw.edu
+
+Amina Venton, aventon@uw.edu
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) for details
